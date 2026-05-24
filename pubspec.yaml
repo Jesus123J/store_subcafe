@@ -1,0 +1,105 @@
+name: gestion_bodega
+description: Sistema de gestion de ventas, inventario y cajas para bodega/fotocopiadora.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # ─── Estado y navegación ───
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+  go_router: ^14.2.0
+
+  # ─── Modelos inmutables ───
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  equatable: ^2.0.5
+  dartz: ^0.10.1                  # Either<Failure, T>
+
+  # ─── HTTP / API ───
+  dio: ^5.7.0                     # Cliente HTTP (consume backend Spring Boot)
+  pretty_dio_logger: ^1.4.0       # Logs bonitos de requests (dev)
+
+  # ─── Almacenamiento local ───
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.2
+  path_provider: ^2.1.3
+  path: ^1.9.0
+
+  # ─── Seguridad (cliente: solo IDs y hashing local opcional) ───
+  crypto: ^3.0.3
+  uuid: ^4.4.0
+
+  # ─── Códigos ───
+  qr_flutter: ^4.1.0
+  barcode_widget: ^2.0.4
+
+  # ─── Impresión ───
+  # esc_pos_printer/esc_pos_utils se agregan luego (impresoras térmicas).
+  # Por ahora usamos printing + pdf para boletas/reportes.
+  printing: ^5.13.1
+  pdf: ^3.11.0
+
+  # ─── Reportes / exportación ───
+  fl_chart: ^0.68.0
+  excel: ^4.0.2
+  csv: ^6.0.0
+  intl: ^0.20.2
+  data_table_2: ^2.5.15
+
+  # ─── UI Desktop ───
+  fluent_ui: ^4.9.1               # Estilo Windows 11
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10
+  gap: ^3.0.1
+  fluttertoast: ^8.2.6
+  window_manager: ^0.3.9
+  hotkey_manager: ^0.2.3
+  tray_manager: ^0.2.3              # Reemplaza system_tray (compatible con uuid 4)
+  sidebarx: ^0.17.1
+
+  # ─── Archivos ───
+  file_picker: ^8.0.5
+  file_selector: ^1.0.3
+  open_file: ^3.5.7
+  archive: ^3.6.1
+
+  # ─── Utilidades ───
+  logger: ^2.3.0
+  collection: ^1.18.0
+  connectivity_plus: ^6.0.3
+  package_info_plus: ^8.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.0
+  custom_lint: ^0.6.4
+  riverpod_lint: ^2.3.10
+  msix: ^3.16.7                   # Empaquetar para Windows Store
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+
+# ─── Configuración del instalador MSIX ───
+msix_config:
+  display_name: Gestion Bodega
+  publisher_display_name: Thiago
+  identity_name: com.thiago.gestionbodega
+  msix_version: 1.0.0.0
+  logo_path: assets/icons/app_icon.png
+  capabilities: internetClient

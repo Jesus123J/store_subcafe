@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\Jesus Gutierrez\\\\Documents\\\\Proyeto_2026\" | Select-Object Name, @{N='KB';E={[math]::Round\\($_.Length/1KB,1\\)}}, LastWriteTime | Format-Table -AutoSize)",
+      "PowerShell(& flutter config --enable-windows-desktop 2>&1)",
+      "PowerShell(& flutter config --enable-web 2>&1)",
+      "PowerShell(& flutter doctor 2>&1)",
+      "PowerShell(& flutter upgrade 2>&1)",
+      "PowerShell(& flutter upgrade --force 2>&1)",
+      "PowerShell(& python -c \"import bcrypt; print\\('OK bcrypt disponible'\\)\" 2>&1)",
+      "PowerShell(& python -m pip install bcrypt --quiet 2>&1)",
+      "PowerShell(& python -c \"import bcrypt; print\\(bcrypt.hashpw\\(b'admin123', bcrypt.gensalt\\(10\\)\\).decode\\(\\)\\)\" 2>&1)",
+      "PowerShell(\"Verificando si Python tiene bcrypt:\")",
+      "PowerShell(\"\")",
+      "PowerShell(\"Si no esta, instalo:\")",
+      "PowerShell(\"Generando hash para admin123:\")",
+      "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\Jesus Gutierrez\\\\Documents\\\\Proyeto_2026\\\\lib\\\\core\\\\services\" -Force)",
+      "PowerShell(\"OK\")",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

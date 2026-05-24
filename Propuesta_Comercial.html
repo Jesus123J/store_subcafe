@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Propuesta Comercial - Sistema de Gestión de Ventas</title>
+<style>
+  @page {
+    size: A4;
+    margin: 2cm 1.8cm;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', 'Calibri', 'Arial', sans-serif;
+    color: #2c3e50;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    font-size: 11pt;
+  }
+
+  /* === PORTADA === */
+  .cover {
+    page-break-after: always;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+    color: white;
+    margin: -2cm -1.8cm;
+    padding: 4cm 3cm;
+  }
+
+  .cover-header { text-align: right; font-size: 10pt; opacity: 0.85; }
+
+  .cover-title {
+    text-align: center;
+    margin: auto 0;
+  }
+
+  .cover-title .badge {
+    display: inline-block;
+    padding: 6px 18px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 30px;
+    font-size: 10pt;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+
+  .cover-title h1 {
+    font-size: 32pt;
+    margin: 0 0 15px 0;
+    font-weight: 300;
+    line-height: 1.2;
+  }
+
+  .cover-title h2 {
+    font-size: 16pt;
+    margin: 0;
+    font-weight: 300;
+    opacity: 0.9;
+  }
+
+  .cover-footer {
+    border-top: 1px solid rgba(255,255,255,0.3);
+    padding-top: 20px;
+    font-size: 10pt;
+  }
+
+  .cover-footer .line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  /* === CONTENIDO === */
+  h1.section {
+    color: #1a365d;
+    font-size: 18pt;
+    border-bottom: 3px solid #2c5282;
+    padding-bottom: 6px;
+    margin-top: 30px;
+    margin-bottom: 18px;
+    page-break-after: avoid;
+  }
+
+  h2.subsection {
+    color: #2c5282;
+    font-size: 13pt;
+    margin-top: 22px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    color: #2c5282;
+    font-size: 11pt;
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+
+  p { margin: 8px 0; text-align: justify; }
+
+  /* === TABLAS === */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+
+  th {
+    background: #1a365d;
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+  }
+
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) td { background: #f7fafc; }
+
+  /* === CAJAS / CALLOUTS === */
+  .info-box {
+    background: #ebf8ff;
+    border-left: 4px solid #3182ce;
+    padding: 14px 18px;
+    margin: 14px 0;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+
+  .success-box {
+    background: #f0fff4;
+    border-left: 4px solid #38a169;
+    padding: 14px 18px;
+    margin: 14px 0;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+
+  .warning-box {
+    background: #fffbeb;
+    border-left: 4px solid #d69e2e;
+    padding: 14px 18px;
+    margin: 14px 0;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+
+  /* === LISTA DE MÓDULOS === */
+  .module {
+    background: #f7fafc;
+    border-left: 4px solid #2c5282;
+    padding: 12px 16px;
+    margin: 10px 0;
+    border-radius: 4px;
+    page-break-inside: avoid;
+  }
+
+  .module-title {
+    font-weight: 600;
+    color: #1a365d;
+    font-size: 12pt;
+    margin-bottom: 6px;
+  }
+
+  .module ul { margin: 4px 0 0 0; padding-left: 20px; }
+  .module li { margin: 3px 0; }
+
+  /* === PRECIO === */
+  .price-box {
+    background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+    color: white;
+    padding: 25px 30px;
+    border-radius: 8px;
+    text-align: center;
+    margin: 20px 0;
+    page-break-inside: avoid;
+  }
+
+  .price-box .label {
+    font-size: 10pt;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.85;
+    margin-bottom: 8px;
+  }
+
+  .price-box .amount {
+    font-size: 36pt;
+    font-weight: 300;
+    margin: 5px 0;
+  }
+
+  .price-box .note { font-size: 10pt; opacity: 0.85; }
+
+  /* === CHECKLIST === */
+  .checklist {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+  }
+  .checklist li {
+    padding: 6px 0 6px 28px;
+    position: relative;
+  }
+  .checklist li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    color: #38a169;
+    font-weight: bold;
+    font-size: 14pt;
+  }
+
+  /* === FIRMA === */
+  .signature-block {
+    margin-top: 60px;
+    page-break-inside: avoid;
+  }
+
+  .signature-row {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 50px;
+  }
+
+  .signature {
+    text-align: center;
+    width: 45%;
+  }
+
+  .signature .line {
+    border-top: 1.5px solid #2c3e50;
+    padding-top: 6px;
+    font-size: 10pt;
+  }
+
+  /* === UTILS === */
+  .text-center { text-align: center; }
+  .text-muted { color: #718096; font-size: 9.5pt; }
+  .page-break { page-break-before: always; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== PORTADA ========== -->
+<div class="cover">
+  <div class="cover-header">
+    <strong>PROPUESTA COMERCIAL</strong><br>
+    N° PRO-2026-001
+  </div>
+
+  <div class="cover-title">
+    <div class="badge">DESARROLLO DE SOFTWARE</div>
+    <h1>Sistema de Gestión<br>de Ventas e Inventario</h1>
+    <h2>Aplicación de Escritorio Multi-Terminal</h2>
+  </div>
+
+  <div class="cover-footer">
+    <div class="line"><span><strong>Preparado para:</strong></span><span>[Nombre del Cliente]</span></div>
+    <div class="line"><span><strong>Preparado por:</strong></span><span>Thiago — Desarrollo de Software</span></div>
+    <div class="line"><span><strong>Fecha de emisión:</strong></span><span>17 de Mayo de 2026</span></div>
+    <div class="line"><span><strong>Validez:</strong></span><span>30 días</span></div>
+  </div>
+</div>
+
+<!-- ========== 1. INTRODUCCIÓN ========== -->
+<h1 class="section">1. Introducción</h1>
+
+<p>Agradezco la confianza depositada para el desarrollo de su sistema de gestión. La presente propuesta detalla el alcance, cronograma, inversión y condiciones del proyecto solicitado.</p>
+
+<p>El sistema propuesto está orientado a digitalizar y automatizar la operación diaria de su negocio, permitiendo controlar ventas, inventario, cajas, créditos a personal y generar reportes en tiempo real desde múltiples terminales conectadas en red local.</p>
+
+<div class="info-box">
+  <strong>Visión del proyecto:</strong> Entregar una herramienta robusta, intuitiva y a medida — equivalente en funcionalidad a sistemas comerciales como el de Tambo, pero personalizada a las necesidades específicas de su negocio, sin licencias mensuales recurrentes.
+</div>
+
+<!-- ========== 2. ENTENDIMIENTO ========== -->
+<h1 class="section">2. Entendimiento del Proyecto</h1>
+
+<p>Tras revisar el bosquejo enviado, se ha identificado la necesidad de un sistema integral que cubra las siguientes áreas operativas:</p>
+
+<ul>
+  <li><strong>Gestión de usuarios</strong> con tres niveles de acceso: Vendedor, Encargado y Administrador.</li>
+  <li><strong>Catálogo de productos</strong> con histórico de costos y precios, control de stock y mermas.</li>
+  <li><strong>Servicio de fotocopiado</strong> (A4, A3, DNI, impresiones) con control de contómetro.</li>
+  <li><strong>Punto de venta</strong> con múltiples formas de pago (Efectivo, Yape, Plin, Niubiz, Crédito).</li>
+  <li><strong>Control de cajas por turnos</strong> (Día 07:30–19:30 / Noche 19:30–07:30) con cuadre y avances.</li>
+  <li><strong>Sistema de crédito a trabajadores</strong> con cierre mensual automático.</li>
+  <li><strong>Módulo de reportes</strong> de ventas, stock, costos y precios.</li>
+</ul>
+
+<!-- ========== 3. DIFERENCIADORES ========== -->
+<h1 class="section">3. ¿Por qué un sistema a medida y no Tambo o similar?</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Característica</th>
+      <th style="text-align:center;">Sistemas comerciales (Tambo)</th>
+      <th style="text-align:center;">Sistema propuesto</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Punto de venta multi-pago</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+    <tr><td>Control de inventario y mermas</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+    <tr><td>Reportes estándar</td><td style="text-align:center;">✓</td><td style="text-align:center;">✓</td></tr>
+    <tr><td><strong>Crédito a trabajadores con cierre mensual</strong></td><td style="text-align:center; color:#c53030;">✗</td><td style="text-align:center; color:#38a169;"><strong>✓</strong></td></tr>
+    <tr><td><strong>Reportes personalizados a su negocio</strong></td><td style="text-align:center; color:#c53030;">Limitado</td><td style="text-align:center; color:#38a169;"><strong>✓</strong></td></tr>
+    <tr><td><strong>Control de contómetro de fotocopiadora</strong></td><td style="text-align:center; color:#c53030;">✗</td><td style="text-align:center; color:#38a169;"><strong>✓</strong></td></tr>
+    <tr><td><strong>Turnos día/noche personalizados</strong></td><td style="text-align:center; color:#c53030;">✗</td><td style="text-align:center; color:#38a169;"><strong>✓</strong></td></tr>
+    <tr><td>Pago único (sin mensualidades)</td><td style="text-align:center; color:#c53030;">Licencia anual</td><td style="text-align:center; color:#38a169;"><strong>✓</strong></td></tr>
+    <tr><td>Código y datos en su poder</td><td style="text-align:center; color:#c53030;">✗</td><td style="text-align:center; color:#38a169;"><strong>✓</strong></td></tr>
+  </tbody>
+</table>
+
+<!-- ========== 4. MÓDULOS ========== -->
+<div class="page-break"></div>
+<h1 class="section">4. Alcance del Sistema — Módulos</h1>
+
+<div class="module">
+  <div class="module-title">4.1 Módulo de Usuarios y Seguridad</div>
+  <ul>
+    <li>Inicio de sesión con usuario y contraseña cifrada.</li>
+    <li>Tres roles: <strong>Vendedor</strong> (ventas), <strong>Encargado</strong> (carga de información, reportes, avance de efectivo, correcciones) y <strong>Administrador</strong> (acceso total).</li>
+    <li>Registro de actividad por usuario para auditoría.</li>
+  </ul>
+</div>
+
+<div class="module">
+  <div class="module-title">4.2 Módulo de Proveedores</div>
+  <ul>
+    <li>Registro y mantenimiento de Razón Social, RUC y Dirección.</li>
+    <li>Historial de compras por proveedor.</li>
+  </ul>
+</div>
+
+<div class="module">
+  <div class="module-title">4.3 Módulo de Productos e Inventario</div>
+  <ul>
+    <li>Catálogo con descripción, costo histórico, precio de venta histórico y stock.</li>
+    <li>Alerta automática de stock mínimo.</li>
+    <li>Registro de mermas por vencimiento o deterioro.</li>
+    <li>Servicios especiales: fotocopias A4, A3, DNI, impresiones con control de contómetro.</li>
+  </ul>
+</div>
+
+<div class="module">
+  <div class="module-title">4.4 Módulo de Compras</div>
+  <ul>
+    <li>Registro de compras a proveedores con actualización automática de stock.</li>
+    <li>Actualización del histórico de costos.</li>
+  </ul>
+</div>
+
+<div class="module">
+  <div class="module-title">4.5 Módulo de Ventas (Punto de Venta)</div>
+  <ul>
+    <li>Pantalla rápida y ergonómica con búsqueda por nombre o código de barras.</li>
+    <li>Formas de pago: <strong>Efectivo, Yape, Plin, Niubiz y Crédito a trabajadores</strong>.</li>
+    <li>Impresión de ticket de venta en impresora térmica.</li>
+    <li>Atajos de teclado para velocidad en hora pico.</li>
+  </ul>
+</div>
+
+<div class="module">
+  <div class="module-title">4.6 Módulo de Cajas y Turnos</div>
+  <ul>
+    <li>Turnos preconfigurados: Día (07:30–19:30) / Noche (19:30–07:30).</li>
+    <li>Apertura y cierre de caja con cuadre automático.</li>
+    <li>Registro de avances de efectivo.</li>
+    <li>Correcciones por Encargado/Administrador: cambios de productos, modalidades de pago, devoluciones.</li>
+  </ul>
+</div>
+
+<div class="module">
+  <div class="module-title">4.7 Módulo de Crédito a Trabajadores ⭐</div>
+  <ul>
+    <li>Registro de consumos al crédito por trabajador.</li>
+    <li>Cierre automático a fin de mes y traslado a la cuenta de deuda.</li>
+    <li>Reporte de deuda acumulada por trabajador.</li>
+  </ul>
+</div>
+
+<div class="module">
+  <div class="module-title">4.8 Módulo de Reportes</div>
+  <ul>
+    <li>Venta diaria por turno (día/noche) y por forma de pago (Efectivo, Yape, Plin, Niubiz, Crédito).</li>
+    <li>Reporte de stock con costo y precio de venta.</li>
+    <li>Reporte de mermas.</li>
+    <li>Reporte de créditos por trabajador.</li>
+    <li>Exportación a Excel y PDF.</li>
+  </ul>
+</div>
+
+<!-- ========== 5. TECNOLOGÍA ========== -->
+<div class="page-break"></div>
+<h1 class="section">5. Tecnología y Arquitectura</h1>
+
+<table>
+  <thead>
+    <tr><th>Componente</th><th>Tecnología</th><th>Justificación</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Aplicación de escritorio</td><td>Flutter Desktop (Windows)</td><td>Interfaz moderna, rápida y mantenible</td></tr>
+    <tr><td>Base de datos</td><td>PostgreSQL</td><td>Robusta, gratuita, soporta múltiples usuarios concurrentes</td></tr>
+    <tr><td>Red</td><td>Red local (LAN)</td><td>Una PC actúa como servidor de BD; las demás se conectan</td></tr>
+    <tr><td>Impresión</td><td>ESC/POS + impresoras estándar</td><td>Compatible con impresoras térmicas comunes en Perú</td></tr>
+    <tr><td>Backups</td><td>Automáticos diarios</td><td>Respaldo cifrado y exportable a USB o nube</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Arquitectura propuesta:</strong> Una PC del local (idealmente la del Administrador) funciona como <em>servidor</em> alojando la base de datos PostgreSQL. Las demás PCs (cajas, recepción) se conectan a través de la red local Wi-Fi/Ethernet. Esto permite que todos vean la misma información en tiempo real sin depender de internet.
+</div>
+
+<!-- ========== 6. CRONOGRAMA ========== -->
+<h1 class="section">6. Cronograma de Entrega</h1>
+
+<table>
+  <thead>
+    <tr><th>Fase</th><th>Entregable</th><th>Duración</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Análisis, diseño de BD y mockups de pantallas</td><td>1 semana</td></tr>
+    <tr><td>2</td><td>Módulos base: Usuarios, Proveedores, Productos</td><td>2 semanas</td></tr>
+    <tr><td>3</td><td>Módulo de Compras y control de inventario</td><td>1 semana</td></tr>
+    <tr><td>4</td><td>Módulo de Ventas (POS) con formas de pago</td><td>2 semanas</td></tr>
+    <tr><td>5</td><td>Módulo de Cajas, Turnos y Crédito a trabajadores</td><td>2 semanas</td></tr>
+    <tr><td>6</td><td>Módulo de Reportes y exportación</td><td>1 semana</td></tr>
+    <tr><td>7</td><td>Pruebas, instalación, capacitación y entrega final</td><td>1 semana</td></tr>
+    <tr style="background:#1a365d; color:white; font-weight:bold;"><td colspan="2" style="color:white;">TIEMPO TOTAL ESTIMADO</td><td style="color:white;">10 semanas</td></tr>
+  </tbody>
+</table>
+
+<!-- ========== 7. ENTREGABLES ========== -->
+<h1 class="section">7. Entregables Incluidos</h1>
+
+<ul class="checklist">
+  <li>Sistema instalado y configurado en sus equipos (servidor + clientes).</li>
+  <li>Instalador ejecutable (.exe / .msix) para futuras reinstalaciones.</li>
+  <li>Manual de usuario en formato PDF.</li>
+  <li>Capacitación presencial / remota al personal (hasta 4 horas).</li>
+  <li>Configuración de backups automáticos diarios.</li>
+  <li>3 meses de soporte técnico gratuito post-entrega.</li>
+  <li>Garantía de 6 meses sobre errores de funcionalidad.</li>
+</ul>
+
+<!-- ========== 8. INVERSIÓN ========== -->
+<div class="page-break"></div>
+<h1 class="section">8. Inversión</h1>
+
+<div class="price-box">
+  <div class="label">Inversión total del proyecto</div>
+  <div class="amount">S/. 6,000.00</div>
+  <div class="note">Soles peruanos · Pago único · Sin licencias mensuales</div>
+</div>
+
+<h2 class="subsection">Forma de pago</h2>
+
+<table>
+  <thead>
+    <tr><th>Cuota</th><th>Momento</th><th>Porcentaje</th><th>Monto (S/.)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Al firmar / iniciar</td><td>50%</td><td>S/. 3,000.00</td></tr>
+    <tr><td>2</td><td>Entrega de prototipo funcional (semana 5)</td><td>30%</td><td>S/. 1,800.00</td></tr>
+    <tr><td>3</td><td>Instalación, capacitación y entrega final</td><td>20%</td><td>S/. 1,200.00</td></tr>
+  </tbody>
+</table>
+
+<h2 class="subsection">Soporte post-garantía (opcional)</h2>
+
+<table>
+  <thead>
+    <tr><th>Plan</th><th>Incluye</th><th>Costo mensual</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Básico</td><td>Correcciones de errores, respaldo remoto</td><td>S/. 150</td></tr>
+    <tr><td>Plus</td><td>Lo anterior + ajustes menores y reportes adicionales</td><td>S/. 250</td></tr>
+  </tbody>
+</table>
+
+<!-- ========== 9. NO INCLUYE ========== -->
+<h1 class="section">9. Lo que NO incluye esta propuesta</h1>
+
+<div class="warning-box">
+  Para mantener la transparencia, los siguientes ítems no están incluidos:
+  <ul>
+    <li>Hardware: PCs, impresoras térmicas, lectores de código de barras o equipos de red.</li>
+    <li>Licencias de Windows.</li>
+    <li>Integración directa con APIs de Yape, Plin o Niubiz (estos pagos se registran manualmente; estas plataformas no ofrecen API pública para pequeños comercios).</li>
+    <li>Instalación de cableado de red.</li>
+    <li>Desarrollo de versión web o móvil (puede cotizarse como adicional).</li>
+  </ul>
+</div>
+
+<!-- ========== 10. TÉRMINOS ========== -->
+<h1 class="section">10. Términos y Condiciones</h1>
+
+<ol>
+  <li><strong>Validez de la propuesta:</strong> 30 días calendario desde la fecha de emisión.</li>
+  <li><strong>Inicio del proyecto:</strong> Una vez recibida la cuota inicial.</li>
+  <li><strong>Cambios de alcance:</strong> Modificaciones posteriores al inicio se cotizarán por separado.</li>
+  <li><strong>Confidencialidad:</strong> Toda la información del negocio será tratada con estricta reserva.</li>
+  <li><strong>Propiedad:</strong> El cliente es propietario del sistema y los datos. Se entrega instalador y respaldo del código fuente.</li>
+  <li><strong>Garantía:</strong> 6 meses sobre errores de funcionalidad imputables al desarrollo.</li>
+</ol>
+
+<!-- ========== 11. ACEPTACIÓN ========== -->
+<h1 class="section">11. Aceptación</h1>
+
+<p>La firma del presente documento autoriza el inicio del desarrollo bajo los términos descritos.</p>
+
+<div class="signature-block">
+  <div class="signature-row">
+    <div class="signature">
+      <div class="line">
+        <strong>[Nombre del Cliente]</strong><br>
+        Cliente<br>
+        DNI: ___________________
+      </div>
+    </div>
+    <div class="signature">
+      <div class="line">
+        <strong>Thiago</strong><br>
+        Desarrollador<br>
+        DNI: ___________________
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="text-center text-muted" style="margin-top: 50px;">
+  ─── Gracias por su confianza ───<br>
+  📱 [Tu número de WhatsApp] · ✉️ [Tu correo]
+</div>
+
+</body>
+</html>

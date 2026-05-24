@@ -1,0 +1,137 @@
+# ============================================================
+# Flutter / Dart
+# ============================================================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+migrate_working_dir/
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+**/doc/api/
+
+# Web
+/web/.dart_tool/
+
+# Windows specific (runner generated files)
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
+windows/flutter/ephemeral/
+
+# Android
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+android/key.properties
+**/*.keystore
+**/*.jks
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# iOS / macOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Flutter/.last_build_id
+**/Pods/
+**/.symlinks/
+
+# Linux
+linux/flutter/ephemeral/
+
+# Coverage
+coverage/
+
+# Symbols
+app.*.symbols
+app.*.map.json
+
+# ============================================================
+# Spring Boot / Java / Maven
+# ============================================================
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/HELP.md
+backend/.flattened-pom.xml
+backend/build/
+backend/.gradle/
+backend/out/
+*.class
+
+# ============================================================
+# IDEs / Editores
+# ============================================================
+.idea/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.metadata
+*.swp
+*.swo
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+
+# Si quieres compartir tu config de VSCode, comenta esto:
+.vscode/
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================
+# Logs y reportes locales
+# ============================================================
+*.log
+build_log.txt
+*.tmp
+*.pyc
+
+# ============================================================
+# Backups y archivos temporales del usuario
+# ============================================================
+_backup_pre_create/
+*.backup
+*.bak
+
+# ============================================================
+# Secretos (NO subir a git)
+# ============================================================
+.env
+.env.local
+.env.production
+**/application-local.yml
+**/application-prod.yml
+*.pem
+*.key
+*.p12
+
+# ============================================================
+# Scripts locales que tienen credenciales
+# ============================================================
+reset_postgres_password.ps1

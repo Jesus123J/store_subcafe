@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: gestion-bodega-backend
+
+  # ─── PostgreSQL ───
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gestion_bodega
+    username: bodega_user
+    password: bodega_pass
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  # ─── JPA / Hibernate ───
+  jpa:
+    hibernate:
+      ddl-auto: validate          # NUNCA usar 'create' o 'update' — Flyway maneja el schema
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: America/Lima
+    open-in-view: false
+
+  # ─── Flyway (migraciones) ───
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  # ─── Jackson (JSON) ───
+  jackson:
+    time-zone: America/Lima
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: NON_NULL
+
+# ─── Server ───
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# ─── App config (JWT, etc.) ───
+app:
+  jwt:
+    # CAMBIAR EN PRODUCCION — debe tener minimo 256 bits (32 chars)
+    secret: tu_secret_super_seguro_y_largo_de_minimo_32_caracteres_aqui_va
+    expiration-ms: 28800000        # 8 horas
+  cors:
+    allowed-origins: http://localhost:*,http://127.0.0.1:*
+
+# ─── Swagger ───
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+# ─── Logging ───
+logging:
+  level:
+    root: INFO
+    com.thiago.gestionbodega: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.security: INFO
