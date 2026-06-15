@@ -14,8 +14,12 @@ class Sidebar extends StatelessWidget {
     _SidebarItem('Proveedores', Icons.local_shipping, AppRoutes.proveedores),
     _SidebarItem('Cajas', Icons.account_balance_wallet, AppRoutes.cajas),
     _SidebarItem('Créditos', Icons.credit_card, AppRoutes.creditos),
+    _SidebarItem('Vales', Icons.confirmation_number, AppRoutes.vales),
+    _SidebarItem('Puntos', Icons.star, AppRoutes.puntos),
     _SidebarItem('Reportes', Icons.bar_chart, AppRoutes.reportes),
+    _SidebarItem('Trabajadores', Icons.badge, AppRoutes.trabajadores),
     _SidebarItem('Usuarios', Icons.people, AppRoutes.usuarios),
+    _SidebarItem('Configuración', Icons.settings, AppRoutes.configuracion),
   ];
 
   @override
