@@ -5,7 +5,7 @@ import '../../../../core/services/report_export_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../widgets/finalizar_venta_dialog.dart';
-import '../widgets/yape_plin_dialog.dart';
+import '../widgets/multiple_pagos_dialog.dart';
 
 class VentasPage extends StatefulWidget {
   const VentasPage({super.key});
@@ -63,19 +63,16 @@ class _VentasPageState extends State<VentasPage> {
 
   void _vaciar() => setState(_carrito.clear);
 
-  Future<void> _cobrar(String formaPago) async {
+  Future<void> _cobrar() async {
     if (_carrito.isEmpty) return;
 
-    // 1) Si es Yape o Plin → mostrar QR + pedir código de operación
-    String? codigoOperacion;
-    if (formaPago == 'Yape' || formaPago == 'Plin') {
-      codigoOperacion = await showDialog<String>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => YapePlinDialog(formaPago: formaPago, total: _total),
-      );
-      if (codigoOperacion == null || !mounted) return;
-    }
+    // 1) Distribuir el total entre N formas de pago (pago mixto)
+    final pagos = await showDialog<List<PagoParcial>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => MultiplePagosDialog(total: _total),
+    );
+    if (pagos == null || pagos.isEmpty || !mounted) return;
 
     // 2) Diálogo para tipo de comprobante + datos del cliente
     final datos = await showDialog<DatosComprobante>(
@@ -83,28 +80,25 @@ class _VentasPageState extends State<VentasPage> {
       barrierDismissible: false,
       builder: (_) => FinalizarVentaDialog(
         total: _total,
-        formaPago: formaPago,
+        formaPago: _resumenFormasPago(pagos),
         itemsCount: _carrito.fold(0, (s, i) => s + i.cantidad),
       ),
     );
 
     if (datos == null || !mounted) return;
 
-    // 3) Asignar correlativo + nro de comprobante
+    // 3) Asignar correlativo + snapshot de la venta
     final nroComprobante = _siguienteCorrelativo(datos.tipo);
-
-    // 4) Snapshot de la venta
     final venta = _VentaRegistrada(
       nroComprobante: nroComprobante,
       tipoComprobante: datos.tipo,
-      formaPago: formaPago,
+      pagos: pagos,
       total: _total,
       fecha: DateTime.now(),
       items: List.of(_carrito),
       cliente: datos.razonSocialNombre,
       docCliente: datos.nroDocumento,
       direccionCliente: datos.direccion,
-      codigoOperacion: codigoOperacion,
     );
 
     // 4) Guardar en historial del turno + vaciar carrito
@@ -126,9 +120,28 @@ class _VentasPageState extends State<VentasPage> {
           children: [
             _detalleConfirmacion('N° comprobante', nroComprobante),
             _detalleConfirmacion('Total', CurrencyFormatter.format(venta.total)),
-            _detalleConfirmacion('Forma de pago', formaPago),
-            if (venta.codigoOperacion != null)
-              _detalleConfirmacion('Cód. operación', venta.codigoOperacion!),
+            const SizedBox(height: 4),
+            const Text(
+              'Pagos:',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            for (final p in pagos)
+              Padding(
+                padding: const EdgeInsets.only(left: 12, top: 2),
+                child: Text(
+                  '${p.formaPago.label}: ${CurrencyFormatter.format(p.monto)}'
+                  '${p.codigoOperacion != null ? "  #${p.codigoOperacion}" : ""}',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 6),
             if (venta.cliente != null)
               _detalleConfirmacion('Cliente', venta.cliente!),
             if (venta.docCliente != null)
@@ -153,6 +166,16 @@ class _VentasPageState extends State<VentasPage> {
         ],
       ),
     );
+  }
+
+  /// Resumen de formas de pago para mostrar en encabezado del comprobante.
+  /// "Efectivo" / "Yape + Plin" / "Mixto (Efectivo + Yape + Crédito)"
+  String _resumenFormasPago(List<PagoParcial> pagos) {
+    if (pagos.length == 1) return pagos.first.formaPago.label;
+    if (pagos.length == 2) {
+      return '${pagos[0].formaPago.label} + ${pagos[1].formaPago.label}';
+    }
+    return 'Mixto (${pagos.map((p) => p.formaPago.label).join(' + ')})';
   }
 
   Widget _detalleConfirmacion(String k, String v) => Padding(
@@ -199,10 +222,21 @@ class _VentasPageState extends State<VentasPage> {
 
     final subtitulo = StringBuffer()
       ..writeln('Comprobante: ${v.nroComprobante}')
-      ..writeln('Fecha: ${AppDateUtils.formatDateTime(v.fecha)}')
-      ..writeln('Forma de pago: ${v.formaPago}');
-    if (v.codigoOperacion != null) {
-      subtitulo.writeln('Cód. operación: ${v.codigoOperacion}');
+      ..writeln('Fecha: ${AppDateUtils.formatDateTime(v.fecha)}');
+    // Detalle de pagos (pago mixto)
+    if (v.pagos.length == 1) {
+      final p = v.pagos.first;
+      subtitulo.writeln('Forma de pago: ${p.formaPago.label}');
+      if (p.codigoOperacion != null) {
+        subtitulo.writeln('Cód. operación: ${p.codigoOperacion}');
+      }
+    } else {
+      subtitulo.writeln('Pagos:');
+      for (final p in v.pagos) {
+        final codigo = p.codigoOperacion != null ? '  (cód. ${p.codigoOperacion})' : '';
+        subtitulo.writeln('  • ${p.formaPago.label}: '
+            '${CurrencyFormatter.format(p.monto)}$codigo');
+      }
     }
     if (v.cliente != null) subtitulo.writeln('Cliente: ${v.cliente}');
     if (v.docCliente != null) {
@@ -481,26 +515,37 @@ class _VentasPageState extends State<VentasPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Forma de pago',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      // Botón único que abre el diálogo de pago mixto.
+                      // Soporta Efectivo, Yape, Plin, Niubiz, Crédito en una sola venta.
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _carrito.isEmpty ? null : _cobrar,
+                          icon: const Icon(Icons.point_of_sale, size: 22),
+                          label: const Text(
+                            'Cobrar',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.secondary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _PagoBtn('Efectivo', Icons.payments, AppColors.secondary,
-                              onTap: () => _cobrar('Efectivo')),
-                          _PagoBtn('Yape', Icons.phone_android, const Color(0xFF722F8E),
-                              onTap: () => _cobrar('Yape')),
-                          _PagoBtn('Plin', Icons.phone_android, const Color(0xFF00A19A),
-                              onTap: () => _cobrar('Plin')),
-                          _PagoBtn('Niubiz', Icons.credit_card, const Color(0xFFFF6F00),
-                              onTap: () => _cobrar('Niubiz')),
-                          _PagoBtn('Crédito', Icons.account_circle, AppColors.warning,
-                              onTap: () => _cobrar('Crédito a trabajador')),
-                        ],
+                      const Text(
+                        'Soporta pago mixto: Efectivo, Yape, Plin, Niubiz y Crédito',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextButton.icon(
@@ -622,25 +667,31 @@ class _VentasPageState extends State<VentasPage> {
                         const SizedBox(width: 10),
                         const Icon(Icons.payment, size: 12, color: AppColors.textSecondary),
                         const SizedBox(width: 4),
-                        Text(v.formaPago,
-                            style: const TextStyle(
-                                color: AppColors.textSecondary, fontSize: 11)),
-                        if (v.codigoOperacion != null) ...[
-                          const SizedBox(width: 6),
+                        Text(
+                          v.formaPagoResumen,
+                          style: TextStyle(
+                            color: v.pagos.length > 1
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
+                            fontSize: 11,
+                            fontWeight: v.pagos.length > 1 ? FontWeight.w700 : null,
+                          ),
+                        ),
+                        if (v.pagos.length > 1) ...[
+                          const SizedBox(width: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
+                                horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: AppColors.warning.withValues(alpha: 0.15),
+                              color: AppColors.primary.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(3),
                             ),
                             child: Text(
-                              '#${v.codigoOperacion}',
+                              'MIXTO',
                               style: const TextStyle(
-                                fontSize: 10,
-                                fontFamily: 'monospace',
+                                fontSize: 9,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.warning,
+                                color: AppColors.primary,
                               ),
                             ),
                           ),
@@ -827,41 +878,8 @@ class _CantidadStepper extends StatelessWidget {
   }
 }
 
-class _PagoBtn extends StatelessWidget {
-  const _PagoBtn(this.label, this.icon, this.color, {required this.onTap});
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 16),
-            const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                )),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// _PagoBtn eliminado: ahora el flujo de pago lo maneja MultiplePagosDialog,
+// que soporta pago mixto (varias formas de pago en una sola venta).
 
 // ─────────────── Modelos ───────────────
 
@@ -884,19 +902,17 @@ class _VentaRegistrada {
   _VentaRegistrada({
     required this.nroComprobante,
     required this.tipoComprobante,
-    required this.formaPago,
+    required this.pagos,
     required this.total,
     required this.fecha,
     required this.items,
     this.cliente,
     this.docCliente,
     this.direccionCliente,
-    this.codigoOperacion,
   });
 
   final String nroComprobante;
   final TipoComprobante tipoComprobante;
-  final String formaPago;
   final double total;
   final DateTime fecha;
   final List<_CarritoItem> items;
@@ -904,6 +920,16 @@ class _VentaRegistrada {
   final String? docCliente;
   final String? direccionCliente;
 
-  /// Código de operación de Yape/Plin (6 dígitos) para trazabilidad.
-  final String? codigoOperacion;
+  /// Lista de pagos parciales. Una venta puede tener varias formas de pago
+  /// (pago mixto). La suma de pagos[].monto == total.
+  final List<PagoParcial> pagos;
+
+  /// Resumen legible: "Efectivo", "Yape + Plin", "Mixto (...)"
+  String get formaPagoResumen {
+    if (pagos.length == 1) return pagos.first.formaPago.label;
+    if (pagos.length == 2) {
+      return '${pagos[0].formaPago.label} + ${pagos[1].formaPago.label}';
+    }
+    return 'Mixto';
+  }
 }
