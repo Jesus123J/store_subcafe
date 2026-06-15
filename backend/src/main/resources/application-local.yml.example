@@ -1,0 +1,19 @@
+# ============================================================
+# PLANTILLA - copia este archivo a 'application-local.yml'
+# y completa con TUS valores reales.
+#
+# application-local.yml esta en .gitignore - NO se sube al repo.
+# Spring lo carga automaticamente con --spring.profiles.active=local
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gestion_bodega
+    username: bodega_user
+    password: tu_password_real_aqui
+
+app:
+  jwt:
+    # Genera un secret aleatorio fuerte (minimo 32 caracteres). Ejemplo:
+    # openssl rand -base64 48
+    secret: cambia_esto_por_un_secret_aleatorio_de_minimo_32_chars
