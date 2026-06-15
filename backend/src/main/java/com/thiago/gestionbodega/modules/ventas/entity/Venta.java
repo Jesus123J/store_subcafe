@@ -9,6 +9,8 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -38,14 +40,34 @@ public class Venta {
     @Column(name = "total", nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
+    /**
+     * @deprecated Desde V3 una venta puede tener varias formas de pago.
+     * Usar {@link #pagos} en su lugar. Esta columna se mantiene por
+     * compatibilidad con queries y reportes legacy.
+     */
+    @Deprecated
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "forma_pago", nullable = false, columnDefinition = "forma_pago")
+    @Column(name = "forma_pago", columnDefinition = "forma_pago")
     private FormaPago formaPago;
 
+    /**
+     * @deprecated Desde V3 - usar {@code pagos[i].trabajadorCredito}.
+     */
+    @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trabajador_credito_id")
     private Usuario trabajadorCredito;
+
+    /**
+     * Pagos parciales que conforman el total de la venta.
+     * Una venta puede dividirse entre varias formas de pago.
+     * La suma de pagos[].monto debe ser igual a {@link #total}
+     * (validado por trigger en BD).
+     */
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<VentaPago> pagos = new ArrayList<>();
 
     @Column(name = "anulada", nullable = false)
     private boolean anulada;
@@ -56,4 +78,11 @@ public class Venta {
 
     @Column(name = "motivo_anulacion", columnDefinition = "TEXT")
     private String motivoAnulacion;
+
+    /** Helper para agregar un pago manteniendo la relacion bidireccional. */
+    public void agregarPago(VentaPago pago) {
+        pago.setVenta(this);
+        pago.setOrden(this.pagos.size());
+        this.pagos.add(pago);
+    }
 }
