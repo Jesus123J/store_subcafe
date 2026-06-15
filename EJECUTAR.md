@@ -133,6 +133,22 @@ En la terminal donde está Flutter:
 **Causa:** falta el workload C++ de Visual Studio.
 **Solución:** abrir Visual Studio Installer → Modificar → marcar "Desktop development with C++".
 
+### "Migration checksum mismatch for migration version X"
+**Causa:** alguien (yo mismo) modificó un archivo de migración SQL después de que ya fue aplicado en BD.
+**Solución:** desde la versión actual ya está cubierto — `application.yml` tiene `repair-on-migrate: true`, que actualiza los checksums automáticamente al arrancar.
+
+Si llega a fallar igual:
+```powershell
+# Pull último código y reintentar
+git pull
+mvn spring-boot:run
+```
+
+Si persiste, manual:
+```powershell
+& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U bodega_user -d gestion_bodega -c "DELETE FROM flyway_schema_history WHERE success = false;"
+```
+
 ### "Could not connect to PostgreSQL"
 **Causa:** el servicio de Postgres está detenido.
 **Solución:**

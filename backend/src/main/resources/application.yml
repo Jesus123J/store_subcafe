@@ -32,6 +32,10 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
+    # Recalcula checksums automaticamente si un archivo cambio despues de aplicarse.
+    # Util en desarrollo para no bloquear el arranque cuando se ajusta una migracion ya aplicada.
+    # En PRODUCCION dejar en false y manejar cambios solo creando nuevas migraciones (V4, V5, ...).
+    repair-on-migrate: ${FLYWAY_REPAIR_ON_MIGRATE:true}
 
   # ─── Jackson (JSON) ───
   jackson:
