@@ -149,6 +149,10 @@ class _ComprasBody extends StatelessWidget {
                       final c = compras[i];
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (_) => _DetalleCompraDialog(compra: c),
+                        ),
                         leading: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
@@ -194,6 +198,14 @@ class _ComprasBody extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
                                 color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Ver detalle →',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ],
@@ -322,6 +334,197 @@ class _NuevaCompraDialog extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Detalle de una compra. Hoy muestra los datos basicos (proveedor, fecha,
+/// total, observaciones). El detalle de items vendra cuando se implemente
+/// GET /api/compras/{id} con detalle completo (parte de issue #18).
+class _DetalleCompraDialog extends StatelessWidget {
+  const _DetalleCompraDialog({required this.compra});
+  final CompraModel compra;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.shopping_cart,
+                      color: AppColors.primary),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Detalle de compra',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Card principal con los datos
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                children: [
+                  _LineaInfo(
+                    label: 'Proveedor',
+                    value: compra.proveedor,
+                  ),
+                  if (compra.nroDocumento != null)
+                    _LineaInfo(
+                      label: 'Nro documento',
+                      value: compra.nroDocumento!,
+                      monospace: true,
+                    ),
+                  _LineaInfo(
+                    label: 'Fecha',
+                    value: AppDateUtils.formatDateTime(compra.fecha),
+                  ),
+                  if (compra.observaciones != null &&
+                      compra.observaciones!.isNotEmpty)
+                    _LineaInfo(
+                      label: 'Observaciones',
+                      value: compra.observaciones!,
+                    ),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'TOTAL',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(compra.total),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                          fontSize: 22,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Aviso: detalle de items pendiente
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.info.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border:
+                    Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.info, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'El detalle de productos comprados estará disponible al implementar el endpoint completo (issue #18: POST /compras con detalle y actualización automática de stock).',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textPrimary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cerrar'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LineaInfo extends StatelessWidget {
+  const _LineaInfo({
+    required this.label,
+    required this.value,
+    this.monospace = false,
+  });
+  final String label;
+  final String value;
+  final bool monospace;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+                fontFamily: monospace ? 'monospace' : null,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
