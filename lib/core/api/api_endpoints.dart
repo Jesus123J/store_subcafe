@@ -25,6 +25,10 @@ class ApiEndpoints {
 
   // Cajas
   static const String cajas = '/cajas';
+  static const String cajaAbierta = '/cajas/abierta';
+  static const String abrirCaja = '/cajas/abrir';
+  static String cerrarCaja(String id) => '/cajas/$id/cerrar';
+  static String avanceCaja(String id) => '/cajas/$id/avances';
 
   // Créditos
   static const String creditos = '/creditos';
