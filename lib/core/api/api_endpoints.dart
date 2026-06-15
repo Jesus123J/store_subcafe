@@ -36,4 +36,6 @@ class ApiEndpoints {
   // Reportes
   static const String reporteVentasDiarias = '/reportes/ventas-diarias';
   static const String reporteStock = '/reportes/stock';
+  static const String reporteStockBajo = '/reportes/stock-bajo';
+  static const String reporteTopProductos = '/reportes/top-productos';
 }
