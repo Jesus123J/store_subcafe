@@ -34,13 +34,24 @@ class Sidebar extends StatelessWidget {
               children: _items.map((item) {
                 final isActive = currentLocation == item.route;
                 return ListTile(
-                  leading: Icon(item.icon, color: Colors.white),
+                  leading: Icon(
+                    item.icon,
+                    color: Colors.white,
+                  ),
                   title: Text(
                     item.label,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                   selected: isActive,
-                  selectedTileColor: Colors.white12,
+                  // CRITICO: forzar colores en estado seleccionado para no
+                  // heredar el colorScheme.primary (azul oscuro = invisible)
+                  selectedTileColor: Colors.white24,
+                  selectedColor: Colors.white,
+                  iconColor: Colors.white,
+                  textColor: Colors.white,
                   onTap: () => context.go(item.route),
                 );
               }).toList(),
@@ -49,8 +60,15 @@ class Sidebar extends StatelessWidget {
           const Divider(color: Colors.white24, height: 1),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.white),
-            title: const Text('Cerrar sesión',
-                style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Cerrar sesión',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            iconColor: Colors.white,
+            textColor: Colors.white,
             onTap: () => context.go(AppRoutes.login),
           ),
         ],
