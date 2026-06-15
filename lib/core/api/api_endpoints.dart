@@ -38,4 +38,21 @@ class ApiEndpoints {
   static const String reporteStock = '/reportes/stock';
   static const String reporteStockBajo = '/reportes/stock-bajo';
   static const String reporteTopProductos = '/reportes/top-productos';
+
+  // Configuración
+  static const String configuracion = '/configuracion';
+
+  // Clientes / Trabajadores
+  static const String clientes = '/clientes';
+  static const String clientesImport = '/clientes/import';
+
+  // Vales
+  static const String vales = '/vales';
+  static const String emitirVale = '/vales/emitir';
+  static String anularVale(String id) => '/vales/$id/anular';
+
+  // Puntos
+  static const String puntosSaldos = '/puntos/saldos';
+  static const String puntosCanjeables = '/puntos/canjeables';
+  static const String puntosReglaActiva = '/puntos/regla-activa';
 }
