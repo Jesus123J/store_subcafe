@@ -3,10 +3,11 @@ spring:
     name: gestion-bodega-backend
 
   # ─── PostgreSQL ───
+  # Variables sensibles via env vars (con defaults para desarrollo local)
   datasource:
-    url: jdbc:postgresql://localhost:5432/gestion_bodega
-    username: bodega_user
-    password: bodega_pass
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/gestion_bodega}
+    username: ${DB_USER:bodega_user}
+    password: ${DB_PASS:bodega_pass}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -48,11 +49,12 @@ server:
 # ─── App config (JWT, etc.) ───
 app:
   jwt:
-    # CAMBIAR EN PRODUCCION — debe tener minimo 256 bits (32 chars)
-    secret: tu_secret_super_seguro_y_largo_de_minimo_32_caracteres_aqui_va
-    expiration-ms: 28800000        # 8 horas
+    # Variable de entorno obligatoria en produccion. Default solo para dev local.
+    # Debe tener minimo 256 bits (32 chars).
+    secret: ${JWT_SECRET:dev_secret_local_no_usar_en_produccion_minimo_32}
+    expiration-ms: ${JWT_EXPIRATION_MS:28800000}      # 8 horas
   cors:
-    allowed-origins: http://localhost:*,http://127.0.0.1:*
+    allowed-origins: ${CORS_ORIGINS:http://localhost:*,http://127.0.0.1:*}
 
 # ─── Swagger ───
 springdoc:

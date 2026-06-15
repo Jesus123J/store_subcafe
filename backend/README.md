@@ -97,17 +97,38 @@ GRANT ALL ON SCHEMA public TO bodega_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO bodega_user;
 ```
 
-### 3. Ajustar conexión
+### 3. Configurar secretos (importante)
 
-Editar [`application.yml`](src/main/resources/application.yml) si tu PostgreSQL usa host/puerto/credenciales distintas a las default:
+El `application.yml` ahora usa **variables de entorno** para credenciales:
 
 ```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/gestion_bodega
-    username: bodega_user
-    password: bodega_pass
+datasource:
+  url: ${DB_URL:jdbc:postgresql://localhost:5432/gestion_bodega}
+  username: ${DB_USER:bodega_user}
+  password: ${DB_PASS:bodega_pass}
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev_secret_local_no_usar_en_produccion_minimo_32}
 ```
+
+**Opción A — Desarrollo local** (más simple):
+Los valores por defecto funcionan tal cual con la BD local. No necesitas configurar nada.
+
+**Opción B — Producción** (recomendado):
+Define las variables en el sistema operativo antes de arrancar:
+
+```bash
+# Windows PowerShell
+$env:DB_USER="bodega_user"
+$env:DB_PASS="tu_password_real"
+$env:JWT_SECRET="$(openssl rand -base64 48)"
+mvn spring-boot:run
+```
+
+**Opción C — Perfil local** (recomendada para devs):
+1. Copia `application-local.yml.example` a `application-local.yml`
+2. Edita con tus valores reales (no se sube al repo, está en .gitignore)
+3. Arranca con: `mvn spring-boot:run -Dspring-boot.run.profiles=local`
 
 ### 4. Compilar y arrancar
 
