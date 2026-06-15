@@ -32,10 +32,6 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
-    # Recalcula checksums automaticamente si un archivo cambio despues de aplicarse.
-    # Util en desarrollo para no bloquear el arranque cuando se ajusta una migracion ya aplicada.
-    # En PRODUCCION dejar en false y manejar cambios solo creando nuevas migraciones (V4, V5, ...).
-    repair-on-migrate: ${FLYWAY_REPAIR_ON_MIGRATE:true}
 
   # ─── Jackson (JSON) ───
   jackson:
@@ -50,7 +46,7 @@ server:
   servlet:
     context-path: /api
 
-# ─── App config (JWT, etc.) ───
+# ─── App config (JWT, Flyway extras, CORS) ───
 app:
   jwt:
     # Variable de entorno obligatoria en produccion. Default solo para dev local.
@@ -59,6 +55,10 @@ app:
     expiration-ms: ${JWT_EXPIRATION_MS:28800000}      # 8 horas
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:*,http://127.0.0.1:*}
+  # Flyway extras (la propiedad spring.flyway.repair-on-migrate NO existe en
+  # Spring Boot Community, asi que se implementa en FlywayConfig.java).
+  flyway:
+    repair-on-startup: ${FLYWAY_REPAIR:true}
 
 # ─── Swagger ───
 springdoc:
