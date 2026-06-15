@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 import '../../data/models/compra_model.dart';
 import '../providers/compras_provider.dart';
+import '../widgets/nueva_compra_dialog.dart';
 
 class ComprasPage extends ConsumerWidget {
   const ComprasPage({super.key});
@@ -35,7 +36,7 @@ class ComprasPage extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: () => _abrirFormulario(context),
+                onPressed: () => _abrirFormulario(context, ref),
                 icon: const Icon(Icons.add_shopping_cart),
                 label: const Text('Registrar nueva compra'),
               ),
@@ -52,7 +53,7 @@ class ComprasPage extends ConsumerWidget {
                         'Aún no hay compras registradas.\nUse el botón de arriba para registrar la primera.',
                     icon: Icons.shopping_cart_outlined,
                     actionLabel: 'Registrar compra',
-                    onAction: () => _abrirFormulario(context),
+                    onAction: () => _abrirFormulario(context, ref),
                   );
                 }
                 return _ComprasBody(compras: compras);
@@ -64,15 +65,14 @@ class ComprasPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _abrirFormulario(BuildContext context) async {
+  Future<void> _abrirFormulario(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => const _NuevaCompraDialog(),
+      builder: (_) => const NuevaCompraDialog(),
     );
     if (ok == true && context.mounted) {
-      context.showSnack(
-        'Pendiente: POST /api/compras aún no implementado en backend',
-      );
+      context.showSnack('Compra registrada. Stock actualizado.');
+      ref.invalidate(comprasListProvider);
     }
   }
 }
@@ -278,84 +278,29 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _NuevaCompraDialog extends StatelessWidget {
-  const _NuevaCompraDialog();
+// El formulario de Nueva Compra ahora vive en widgets/nueva_compra_dialog.dart
+// con conexion real al backend.
 
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 480),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.shopping_cart, color: AppColors.primary),
-                const SizedBox(width: 8),
-                Text('Registrar nueva compra',
-                    style: context.textTheme.titleLarge),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: AppColors.warning.withValues(alpha: 0.4)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.construction, color: AppColors.warning),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'El endpoint POST /api/compras aún no está implementado en el backend.\n\n'
-                      'Esta pantalla se completará al implementar el módulo de Compras del backend.',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Entendido'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Detalle de una compra. Hoy muestra los datos basicos (proveedor, fecha,
-/// total, observaciones). El detalle de items vendra cuando se implemente
-/// GET /api/compras/{id} con detalle completo (parte de issue #18).
-class _DetalleCompraDialog extends StatelessWidget {
+/// Detalle de una compra. Consume GET /api/compras/{id} para mostrar los
+/// items completos con productos, cantidades y subtotales.
+class _DetalleCompraDialog extends ConsumerWidget {
   const _DetalleCompraDialog({required this.compra});
   final CompraModel compra;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Consumimos GET /api/compras/{id} para tener los items reales
+    final detalleAsync = ref.watch(compraDetalleProvider(compra.id));
+
     return Dialog(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
+        constraints: const BoxConstraints(maxWidth: 640, maxHeight: 720),
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header
             Row(
               children: [
                 Container(
@@ -364,8 +309,10 @@ class _DetalleCompraDialog extends StatelessWidget {
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.shopping_cart,
-                      color: AppColors.primary),
+                  child: const Icon(
+                    Icons.shopping_cart,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -386,7 +333,7 @@ class _DetalleCompraDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Card principal con los datos
+            // Datos generales (siempre visibles, vienen de la lista)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -396,10 +343,7 @@ class _DetalleCompraDialog extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _LineaInfo(
-                    label: 'Proveedor',
-                    value: compra.proveedor,
-                  ),
+                  _LineaInfo(label: 'Proveedor', value: compra.proveedor),
                   if (compra.nroDocumento != null)
                     _LineaInfo(
                       label: 'Nro documento',
@@ -416,55 +360,136 @@ class _DetalleCompraDialog extends StatelessWidget {
                       label: 'Observaciones',
                       value: compra.observaciones!,
                     ),
-                  const Divider(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'TOTAL',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        CurrencyFormatter.format(compra.total),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                          fontSize: 22,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
-            // Aviso: detalle de items pendiente
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.info.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border:
-                    Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+            // Items: consume el endpoint detallado
+            const Text(
+              'Productos comprados',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                fontSize: 14,
               ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, color: AppColors.info, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'El detalle de productos comprados estará disponible al implementar el endpoint completo (issue #18: POST /compras con detalle y actualización automática de stock).',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textPrimary,
-                        height: 1.5,
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: detalleAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'No se pudo cargar el detalle: $e',
+                    style: const TextStyle(
+                      color: AppColors.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                data: (full) {
+                  final items = full.items ?? [];
+                  if (items.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: Text(
+                          'Esta compra no tiene items registrados',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
                       ),
+                    );
+                  }
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        columnSpacing: 16,
+                        headingRowColor:
+                            WidgetStateProperty.all(AppColors.background),
+                        headingTextStyle: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                        ),
+                        dataTextStyle: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                        ),
+                        columns: const [
+                          DataColumn(label: Text('Producto')),
+                          DataColumn(label: Text('Cant.'), numeric: true),
+                          DataColumn(label: Text('Costo'), numeric: true),
+                          DataColumn(label: Text('Subtotal'), numeric: true),
+                        ],
+                        rows: items
+                            .map(
+                              (it) => DataRow(cells: [
+                                DataCell(Text(it.productoDescripcion)),
+                                DataCell(
+                                    Text(it.cantidad.toStringAsFixed(2))),
+                                DataCell(Text(CurrencyFormatter.format(
+                                    it.costoUnitario))),
+                                DataCell(
+                                  Text(
+                                    CurrencyFormatter.format(it.subtotal),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ]),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Total
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'TOTAL DE LA COMPRA',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    CurrencyFormatter.format(compra.total),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                      fontSize: 22,
                     ),
                   ),
                 ],
