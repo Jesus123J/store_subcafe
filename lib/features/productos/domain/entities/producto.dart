@@ -10,6 +10,7 @@ class Producto extends Equatable {
     required this.usaContometro,
     required this.activo,
     this.codigo,
+    this.esBazar = false,
   });
 
   final String id;
@@ -21,9 +22,22 @@ class Producto extends Equatable {
   final bool usaContometro;
   final bool activo;
 
+  /// Producto del bazar: aceptable como canje de vales y/o puntos.
+  /// Definido por Karina en su respuesta del 17/jun/2026.
+  final bool esBazar;
+
   bool get stockBajo => stock <= stockMinimo;
 
   @override
-  List<Object?> get props =>
-      [id, codigo, descripcion, stock, stockMinimo, esServicio, usaContometro, activo];
+  List<Object?> get props => [
+        id,
+        codigo,
+        descripcion,
+        stock,
+        stockMinimo,
+        esServicio,
+        usaContometro,
+        activo,
+        esBazar,
+      ];
 }

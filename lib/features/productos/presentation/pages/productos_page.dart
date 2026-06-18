@@ -207,15 +207,26 @@ class _ProductosBody extends StatelessWidget {
                               style: const TextStyle(color: AppColors.textPrimary),
                             )),
                             DataCell(
-                              p.esServicio
-                                  ? const _Chip(
+                              Wrap(
+                                spacing: 4,
+                                children: [
+                                  if (p.esServicio)
+                                    const _Chip(
                                       label: 'Servicio',
                                       color: AppColors.info,
                                     )
-                                  : const _Chip(
+                                  else
+                                    const _Chip(
                                       label: 'Producto',
                                       color: AppColors.secondary,
                                     ),
+                                  if (p.esBazar)
+                                    const _Chip(
+                                      label: 'Bazar',
+                                      color: AppColors.primary,
+                                    ),
+                                ],
+                              ),
                             ),
                             DataCell(
                               p.activo
