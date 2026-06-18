@@ -23,28 +23,40 @@ class AppRoutes {
   static const ventas = '/ventas';
   static const productos = '/productos';
   static const compras = '/compras';
-  static const proveedores = '/proveedores';
   static const cajas = '/cajas';
-  static const creditos = '/creditos';
-  static const reportes = '/reportes';
-  static const usuarios = '/usuarios';
-  static const configuracion = '/configuracion';
-  static const trabajadores = '/trabajadores';
+  static const proveedores = '/proveedores';
   static const vales = '/vales';
   static const puntos = '/puntos';
+  static const creditos = '/creditos';
+  static const reportes = '/reportes';
+  static const trabajadores = '/trabajadores';
+  static const usuarios = '/usuarios';
+  static const configuracion = '/configuracion';
 }
 
-/// Transición fade suave (120 ms).
-CustomTransitionPage<T> _fadePage<T>(Widget child) {
+/// Transición fade muy rápida (80ms) sin movimiento horizontal.
+/// Solo aplica al CONTENIDO (no al sidebar), que queda 100% estático.
+CustomTransitionPage<T> _contentFade<T>(Widget child, GoRouterState state) {
   return CustomTransitionPage<T>(
+    key: state.pageKey,
     child: child,
-    transitionDuration: const Duration(milliseconds: 120),
-    reverseTransitionDuration: const Duration(milliseconds: 80),
+    transitionDuration: const Duration(milliseconds: 80),
+    reverseTransitionDuration: const Duration(milliseconds: 60),
     transitionsBuilder: (context, animation, secondary, child) {
       return FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
         child: child,
       );
+    },
+  );
+}
+
+CustomTransitionPage<T> _loginPage<T>(Widget child) {
+  return CustomTransitionPage<T>(
+    child: child,
+    transitionDuration: const Duration(milliseconds: 200),
+    transitionsBuilder: (context, animation, _, child) {
+      return FadeTransition(opacity: animation, child: child);
     },
   );
 }
@@ -55,64 +67,29 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.login,
-        pageBuilder: (_, __) => _fadePage(const LoginPage()),
+        pageBuilder: (_, __) => _loginPage(const LoginPage()),
       ),
-      ShellRoute(
-        pageBuilder: (context, state, child) =>
-            _fadePage(MainLayout(child: child)),
-        routes: [
-          GoRoute(
-            path: AppRoutes.home,
-            redirect: (_, __) => AppRoutes.ventas,
-          ),
-          GoRoute(
-            path: AppRoutes.ventas,
-            pageBuilder: (_, __) => _fadePage(const VentasPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.productos,
-            pageBuilder: (_, __) => _fadePage(const ProductosPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.compras,
-            pageBuilder: (_, __) => _fadePage(const ComprasPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.proveedores,
-            pageBuilder: (_, __) => _fadePage(const ProveedoresPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.cajas,
-            pageBuilder: (_, __) => _fadePage(const CajasPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.creditos,
-            pageBuilder: (_, __) => _fadePage(const CreditosPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.reportes,
-            pageBuilder: (_, __) => _fadePage(const ReportesPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.usuarios,
-            pageBuilder: (_, __) => _fadePage(const UsuariosPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.trabajadores,
-            pageBuilder: (_, __) => _fadePage(const TrabajadoresPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.vales,
-            pageBuilder: (_, __) => _fadePage(const ValesPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.puntos,
-            pageBuilder: (_, __) => _fadePage(const PuntosPage()),
-          ),
-          GoRoute(
-            path: AppRoutes.configuracion,
-            pageBuilder: (_, __) => _fadePage(const ConfiguracionPage()),
-          ),
+
+      /// StatefulShellRoute mantiene el sidebar estático y solo cambia el
+      /// contenido del lado derecho. Cada branch preserva su estado al
+      /// cambiar de tab (estilo Slack/Notion/Linear).
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainLayout(navigationShell: navigationShell);
+        },
+        branches: [
+          _branch(AppRoutes.ventas, const VentasPage()),
+          _branch(AppRoutes.productos, const ProductosPage()),
+          _branch(AppRoutes.compras, const ComprasPage()),
+          _branch(AppRoutes.cajas, const CajasPage()),
+          _branch(AppRoutes.proveedores, const ProveedoresPage()),
+          _branch(AppRoutes.vales, const ValesPage()),
+          _branch(AppRoutes.puntos, const PuntosPage()),
+          _branch(AppRoutes.creditos, const CreditosPage()),
+          _branch(AppRoutes.reportes, const ReportesPage()),
+          _branch(AppRoutes.trabajadores, const TrabajadoresPage()),
+          _branch(AppRoutes.usuarios, const UsuariosPage()),
+          _branch(AppRoutes.configuracion, const ConfiguracionPage()),
         ],
       ),
     ],
@@ -121,3 +98,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+StatefulShellBranch _branch(String path, Widget page) {
+  return StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: path,
+        pageBuilder: (context, state) => _contentFade(page, state),
+      ),
+    ],
+  );
+}
