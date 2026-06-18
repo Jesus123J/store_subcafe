@@ -23,6 +23,7 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
   final _precio = TextEditingController();
   bool _esServicio = false;
   bool _usaContometro = false;
+  bool _esBazar = true; // Por defecto productos físicos son del bazar
 
   @override
   void dispose() {
@@ -156,7 +157,10 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                     children: [
                       SwitchListTile(
                         value: _esServicio,
-                        onChanged: (v) => setState(() => _esServicio = v),
+                        onChanged: (v) => setState(() {
+                          _esServicio = v;
+                          if (v) _esBazar = false; // un servicio no es del bazar
+                        }),
                         title: const Text('Es un servicio',
                             style: TextStyle(color: AppColors.textPrimary)),
                         subtitle: const Text(
@@ -165,6 +169,20 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                         ),
                         contentPadding: EdgeInsets.zero,
                       ),
+                      if (!_esServicio)
+                        SwitchListTile(
+                          value: _esBazar,
+                          onChanged: (v) => setState(() => _esBazar = v),
+                          title: const Text(
+                            'Es producto del bazar',
+                            style: TextStyle(color: AppColors.textPrimary),
+                          ),
+                          subtitle: const Text(
+                            'Aceptable como canje de vales y puntos de fidelización',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
                       if (_esServicio)
                         SwitchListTile(
                           value: _usaContometro,

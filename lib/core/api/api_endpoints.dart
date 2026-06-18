@@ -55,4 +55,10 @@ class ApiEndpoints {
   static const String puntosSaldos = '/puntos/saldos';
   static const String puntosCanjeables = '/puntos/canjeables';
   static const String puntosReglaActiva = '/puntos/regla-activa';
+
+  // Créditos: cierre mensual
+  static const String creditosDelMes = '/creditos/del-mes';
+  static const String creditosDeudaAcumulada = '/creditos/deuda-acumulada';
+  static const String creditosCierres = '/creditos/cierres';
+  static const String creditosCerrarMes = '/creditos/cerrar-mes';
 }
