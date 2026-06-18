@@ -61,7 +61,7 @@ public class PuntosController {
     @GetMapping("/movimientos/{clienteId}")
     public ApiResponse<List<Map<String, Object>>> movimientos(@PathVariable UUID clienteId) {
         var sql = """
-                SELECT id, tipo::text AS tipo, puntos, saldo_despues, observacion, fecha
+                SELECT id, tipo AS tipo, puntos, saldo_despues, observacion, fecha
                 FROM movimientos_puntos
                 WHERE cliente_id = :id
                 ORDER BY fecha DESC

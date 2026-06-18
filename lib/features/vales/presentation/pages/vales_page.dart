@@ -12,7 +12,7 @@ import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
-import '../../../trabajadores/presentation/pages/trabajadores_page.dart';
+import '../../../trabajadores/presentation/providers/trabajadores_provider.dart';
 
 class ValeDto {
   ValeDto({

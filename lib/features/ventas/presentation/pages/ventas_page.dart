@@ -1,51 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/report_export_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../cajas/presentation/providers/cajas_provider.dart';
+import '../../../productos/data/models/producto_model.dart';
+import '../../../productos/presentation/providers/productos_provider.dart';
+import '../providers/ventas_provider.dart';
 import '../widgets/finalizar_venta_dialog.dart';
 import '../widgets/multiple_pagos_dialog.dart';
 
-class VentasPage extends StatefulWidget {
+class VentasPage extends ConsumerStatefulWidget {
   const VentasPage({super.key});
 
   @override
-  State<VentasPage> createState() => _VentasPageState();
+  ConsumerState<VentasPage> createState() => _VentasPageState();
 }
 
-class _VentasPageState extends State<VentasPage> {
-  final _productosCatalogo = const [
-    _ProductoDemo('Inca Kola 500ml', 3.50, '🥤', 'Bebidas'),
-    _ProductoDemo('Coca Cola 500ml', 3.50, '🥤', 'Bebidas'),
-    _ProductoDemo('Agua San Luis 625ml', 1.50, '💧', 'Bebidas'),
-    _ProductoDemo('Galletas Soda Field', 2.00, '🍪', 'Snacks'),
-    _ProductoDemo('Chocolate Sublime', 1.50, '🍫', 'Snacks'),
-    _ProductoDemo('Papitas Lays 35g', 2.50, '🥔', 'Snacks'),
-    _ProductoDemo('Fotocopia A4 B/N', 0.20, '📄', 'Servicios'),
-    _ProductoDemo('Fotocopia A3 B/N', 0.50, '📄', 'Servicios'),
-    _ProductoDemo('Impresión Color A4', 1.00, '🖨️', 'Servicios'),
-    _ProductoDemo('Foto DNI', 5.00, '📷', 'Servicios'),
-    _ProductoDemo('Pan Francés (unid)', 0.30, '🥖', 'Panadería'),
-    _ProductoDemo('Pan Integral (unid)', 0.50, '🥖', 'Panadería'),
-  ];
-
+class _VentasPageState extends ConsumerState<VentasPage> {
   final _carrito = <_CarritoItem>[];
   final _ventasDelTurno = <_VentaRegistrada>[];
-  String _categoriaFiltro = 'Todos';
   final _busquedaCtrl = TextEditingController();
   bool _mostrandoHistorial = false;
+  bool _enviandoVenta = false;
 
-  // Correlativos por tipo de comprobante (mock)
+  // Correlativos de sesion para el comprobante impreso (no se persisten)
   int _correlativoBoleta = 1;
   int _correlativoFactura = 1;
   int _correlativoTicket = 1;
 
   double get _total => _carrito.fold(0, (s, i) => s + i.subtotal);
 
-  void _agregar(_ProductoDemo p) {
+  void _agregar(ProductoModel p) {
     setState(() {
-      final idx = _carrito.indexWhere((i) => i.producto.nombre == p.nombre);
+      final idx = _carrito.indexWhere((i) => i.producto.id == p.id);
       if (idx >= 0) {
         _carrito[idx].cantidad++;
       } else {
@@ -64,7 +56,7 @@ class _VentasPageState extends State<VentasPage> {
   void _vaciar() => setState(_carrito.clear);
 
   Future<void> _cobrar() async {
-    if (_carrito.isEmpty) return;
+    if (_carrito.isEmpty || _enviandoVenta) return;
 
     // 1) Distribuir el total entre N formas de pago (pago mixto)
     final pagos = await showDialog<List<PagoParcial>>(
@@ -74,7 +66,7 @@ class _VentasPageState extends State<VentasPage> {
     );
     if (pagos == null || pagos.isEmpty || !mounted) return;
 
-    // 2) Diálogo para tipo de comprobante + datos del cliente
+    // 2) Tipo de comprobante + datos del cliente
     final datos = await showDialog<DatosComprobante>(
       context: context,
       barrierDismissible: false,
@@ -84,10 +76,38 @@ class _VentasPageState extends State<VentasPage> {
         itemsCount: _carrito.fold(0, (s, i) => s + i.cantidad),
       ),
     );
-
     if (datos == null || !mounted) return;
 
-    // 3) Asignar correlativo + snapshot de la venta
+    // 3) Llamar al backend
+    setState(() => _enviandoVenta = true);
+    try {
+      await ref.read(ventasControllerProvider).registrarVenta(
+            items: _carrito
+                .map((it) => ItemVentaRequest(
+                      productoId: it.producto.id,
+                      cantidad: it.cantidad.toDouble(),
+                      precioUnitario: it.producto.precioVenta,
+                    ))
+                .toList(),
+            pagos: pagos
+                .map((p) => PagoRequest(
+                      formaPago: _toApiFormaPago(p.formaPago),
+                      monto: p.monto,
+                      codigoOperacion: p.codigoOperacion,
+                      trabajadorCreditoId: p.trabajadorId,
+                    ))
+                .toList(),
+          );
+    } catch (e) {
+      if (mounted) _showError('No se pudo registrar la venta:\n$e');
+      return;
+    } finally {
+      if (mounted) setState(() => _enviandoVenta = false);
+    }
+
+    if (!mounted) return;
+
+    // 4) Snapshot local para el historial del turno
     final nroComprobante = _siguienteCorrelativo(datos.tipo);
     final venta = _VentaRegistrada(
       nroComprobante: nroComprobante,
@@ -100,15 +120,12 @@ class _VentasPageState extends State<VentasPage> {
       docCliente: datos.nroDocumento,
       direccionCliente: datos.direccion,
     );
-
-    // 4) Guardar en historial del turno + vaciar carrito
     setState(() {
       _ventasDelTurno.insert(0, venta);
       _carrito.clear();
     });
 
     // 5) Confirmación + opción de imprimir
-    if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -168,8 +185,33 @@ class _VentasPageState extends State<VentasPage> {
     );
   }
 
+  void _showError(String msg) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+        title: const Text('Venta no registrada'),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mapea el enum del dialogo al string que espera el backend.
+  String _toApiFormaPago(FormaPago f) => switch (f) {
+        FormaPago.efectivo => 'EFECTIVO',
+        FormaPago.yape => 'YAPE',
+        FormaPago.plin => 'PLIN',
+        FormaPago.niubiz => 'NIUBIZ',
+        FormaPago.credito => 'CREDITO',
+      };
+
   /// Resumen de formas de pago para mostrar en encabezado del comprobante.
-  /// "Efectivo" / "Yape + Plin" / "Mixto (Efectivo + Yape + Crédito)"
   String _resumenFormasPago(List<PagoParcial> pagos) {
     if (pagos.length == 1) return pagos.first.formaPago.label;
     if (pagos.length == 2) {
@@ -185,7 +227,8 @@ class _VentasPageState extends State<VentasPage> {
             SizedBox(
               width: 110,
               child: Text(k,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
             ),
             Expanded(
               child: Text(v,
@@ -214,8 +257,8 @@ class _VentasPageState extends State<VentasPage> {
     final filas = v.items
         .map((i) => [
               '${i.cantidad}',
-              i.producto.nombre,
-              CurrencyFormatter.format(i.producto.precio),
+              i.producto.descripcion,
+              CurrencyFormatter.format(i.producto.precioVenta),
               CurrencyFormatter.format(i.subtotal),
             ])
         .toList();
@@ -223,7 +266,6 @@ class _VentasPageState extends State<VentasPage> {
     final subtitulo = StringBuffer()
       ..writeln('Comprobante: ${v.nroComprobante}')
       ..writeln('Fecha: ${AppDateUtils.formatDateTime(v.fecha)}');
-    // Detalle de pagos (pago mixto)
     if (v.pagos.length == 1) {
       final p = v.pagos.first;
       subtitulo.writeln('Forma de pago: ${p.formaPago.label}');
@@ -233,7 +275,9 @@ class _VentasPageState extends State<VentasPage> {
     } else {
       subtitulo.writeln('Pagos:');
       for (final p in v.pagos) {
-        final codigo = p.codigoOperacion != null ? '  (cód. ${p.codigoOperacion})' : '';
+        final codigo = p.codigoOperacion != null
+            ? '  (cód. ${p.codigoOperacion})'
+            : '';
         subtitulo.writeln('  • ${p.formaPago.label}: '
             '${CurrencyFormatter.format(p.monto)}$codigo');
       }
@@ -259,13 +303,109 @@ class _VentasPageState extends State<VentasPage> {
 
   @override
   Widget build(BuildContext context) {
-    final categorias = ['Todos', ...{for (final p in _productosCatalogo) p.categoria}];
-    final filtrados = _productosCatalogo.where((p) {
-      final coincideCategoria = _categoriaFiltro == 'Todos' || p.categoria == _categoriaFiltro;
-      final coincideBusqueda = _busquedaCtrl.text.isEmpty ||
-          p.nombre.toLowerCase().contains(_busquedaCtrl.text.toLowerCase());
-      return coincideCategoria && coincideBusqueda;
-    }).toList();
+    final cajaAbierta = ref.watch(cajaAbiertaProvider);
+
+    return cajaAbierta.when(
+      loading: () => const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Text('Error verificando caja: $e',
+              style: const TextStyle(color: AppColors.error)),
+        ),
+      ),
+      data: (caja) {
+        if (caja == null) return _buildSinCajaAbierta(context);
+        return _buildPos(context);
+      },
+    );
+  }
+
+  Widget _buildSinCajaAbierta(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 480),
+          padding: const EdgeInsets.all(32),
+          margin: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_clock,
+                    size: 56, color: AppColors.warning),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Caja no abierta',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'No puedes registrar ventas hasta que abras una caja con el monto inicial y el contómetro del turno.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => context.go(AppRoutes.cajas),
+                  icon: const Icon(Icons.account_balance_wallet),
+                  label: const Text('Abrir caja'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () => ref.invalidate(cajaAbiertaProvider),
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Volver a verificar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPos(BuildContext context) {
+    final productosAsync = ref.watch(productosListProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -292,7 +432,6 @@ class _VentasPageState extends State<VentasPage> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      // Toggle catálogo / historial
                       Container(
                         decoration: BoxDecoration(
                           color: AppColors.background,
@@ -305,13 +444,15 @@ class _VentasPageState extends State<VentasPage> {
                               label: 'Catálogo',
                               icon: Icons.grid_view,
                               activo: !_mostrandoHistorial,
-                              onTap: () => setState(() => _mostrandoHistorial = false),
+                              onTap: () =>
+                                  setState(() => _mostrandoHistorial = false),
                             ),
                             _ToggleBtn(
                               label: 'Historial (${_ventasDelTurno.length})',
                               icon: Icons.history,
                               activo: _mostrandoHistorial,
-                              onTap: () => setState(() => _mostrandoHistorial = true),
+                              onTap: () =>
+                                  setState(() => _mostrandoHistorial = true),
                             ),
                           ],
                         ),
@@ -327,53 +468,84 @@ class _VentasPageState extends State<VentasPage> {
                                 : 'Buscar producto...',
                             prefixIcon: const Icon(Icons.search),
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8)),
                           ),
                         ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh,
+                            color: AppColors.primary),
+                        tooltip: 'Refrescar catálogo',
+                        onPressed: () =>
+                            ref.invalidate(productosListProvider),
                       ),
                     ],
                   ),
                 ),
-                if (!_mostrandoHistorial)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    color: Colors.white,
-                    child: Row(
-                      children: categorias.map((c) {
-                        final activo = c == _categoriaFiltro;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(c),
-                            selected: activo,
-                            onSelected: (_) => setState(() => _categoriaFiltro = c),
-                            selectedColor: AppColors.primary,
-                            labelStyle: TextStyle(
-                              color: activo ? Colors.white : AppColors.textPrimary,
-                              fontWeight: activo ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
                 Expanded(
                   child: _mostrandoHistorial
                       ? _buildHistorial()
-                      : GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 180,
-                            childAspectRatio: 0.95,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                      : productosAsync.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (e, _) => Center(
+                            child: Text(
+                              'No se pudo cargar el catálogo: $e',
+                              style:
+                                  const TextStyle(color: AppColors.error),
+                            ),
                           ),
-                          itemCount: filtrados.length,
-                          itemBuilder: (_, i) => _ProductoCard(
-                            producto: filtrados[i],
-                            onTap: () => _agregar(filtrados[i]),
-                          ),
+                          data: (productos) {
+                            final filtrados = productos
+                                .where((p) => p.activo)
+                                .where((p) {
+                              if (_busquedaCtrl.text.isEmpty) return true;
+                              final q = _busquedaCtrl.text.toLowerCase();
+                              return p.descripcion.toLowerCase().contains(q) ||
+                                  (p.codigo?.toLowerCase().contains(q) ?? false);
+                            }).toList();
+
+                            if (filtrados.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.inventory_2_outlined,
+                                        size: 56,
+                                        color: AppColors.textSecondary),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      productos.isEmpty
+                                          ? 'No hay productos en el catálogo.\nRegistra productos desde la sección Productos.'
+                                          : 'No hay productos que coincidan con la búsqueda.',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: AppColors.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return GridView.builder(
+                              padding: const EdgeInsets.all(16),
+                              gridDelegate:
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 180,
+                                childAspectRatio: 0.95,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                              ),
+                              itemCount: filtrados.length,
+                              itemBuilder: (_, i) => _ProductoCard(
+                                producto: filtrados[i],
+                                onTap: () => _agregar(filtrados[i]),
+                              ),
+                            );
+                          },
                         ),
                 ),
               ],
@@ -402,14 +574,16 @@ class _VentasPageState extends State<VentasPage> {
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${_carrito.fold(0, (s, i) => s + i.cantidad)} items',
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 12),
                         ),
                       ),
                     ],
@@ -425,7 +599,8 @@ class _VentasPageState extends State<VentasPage> {
                                   size: 56, color: AppColors.textSecondary),
                               SizedBox(height: 12),
                               Text('Toca productos para agregarlos',
-                                  style: TextStyle(color: AppColors.textSecondary)),
+                                  style:
+                                      TextStyle(color: AppColors.textSecondary)),
                             ],
                           ),
                         )
@@ -439,22 +614,39 @@ class _VentasPageState extends State<VentasPage> {
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Row(
                                 children: [
-                                  Text(item.producto.emoji,
-                                      style: const TextStyle(fontSize: 24)),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      item.producto.esServicio
+                                          ? Icons.miscellaneous_services
+                                          : Icons.inventory_2,
+                                      color: AppColors.primary,
+                                      size: 20,
+                                    ),
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          item.producto.nombre,
+                                          item.producto.descripcion,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w500,
                                             color: AppColors.textPrimary,
                                           ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                         Text(
-                                          CurrencyFormatter.format(item.producto.precio),
+                                          CurrencyFormatter.format(
+                                              item.producto.precioVenta),
                                           style: const TextStyle(
                                             fontSize: 12,
                                             color: AppColors.textSecondary,
@@ -515,16 +707,25 @@ class _VentasPageState extends State<VentasPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      // Botón único que abre el diálogo de pago mixto.
-                      // Soporta Efectivo, Yape, Plin, Niubiz, Crédito en una sola venta.
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: _carrito.isEmpty ? null : _cobrar,
-                          icon: const Icon(Icons.point_of_sale, size: 22),
-                          label: const Text(
-                            'Cobrar',
-                            style: TextStyle(
+                          onPressed: (_carrito.isEmpty || _enviandoVenta)
+                              ? null
+                              : _cobrar,
+                          icon: _enviandoVenta
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.point_of_sale, size: 22),
+                          label: Text(
+                            _enviandoVenta ? 'Registrando...' : 'Cobrar',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
@@ -552,7 +753,8 @@ class _VentasPageState extends State<VentasPage> {
                         onPressed: _carrito.isEmpty ? null : _vaciar,
                         icon: const Icon(Icons.delete_outline, size: 18),
                         label: const Text('Vaciar carrito'),
-                        style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                        style: TextButton.styleFrom(
+                            foregroundColor: AppColors.error),
                       ),
                     ],
                   ),
@@ -571,8 +773,9 @@ class _VentasPageState extends State<VentasPage> {
     final filtradas = _busquedaCtrl.text.isEmpty
         ? _ventasDelTurno
         : _ventasDelTurno
-            .where((v) =>
-                v.nroComprobante.toLowerCase().contains(_busquedaCtrl.text.toLowerCase()))
+            .where((v) => v.nroComprobante
+                .toLowerCase()
+                .contains(_busquedaCtrl.text.toLowerCase()))
             .toList();
 
     if (filtradas.isEmpty) {
@@ -625,7 +828,8 @@ class _VentasPageState extends State<VentasPage> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
@@ -653,7 +857,8 @@ class _VentasPageState extends State<VentasPage> {
                     const SizedBox(height: 4),
                     Text(
                       v.cliente ?? 'Cliente no registrado',
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 13),
                     ),
                     const SizedBox(height: 2),
                     Row(
@@ -665,7 +870,8 @@ class _VentasPageState extends State<VentasPage> {
                             style: const TextStyle(
                                 color: AppColors.textSecondary, fontSize: 11)),
                         const SizedBox(width: 10),
-                        const Icon(Icons.payment, size: 12, color: AppColors.textSecondary),
+                        const Icon(Icons.payment,
+                            size: 12, color: AppColors.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           v.formaPagoResumen,
@@ -674,7 +880,8 @@ class _VentasPageState extends State<VentasPage> {
                                 ? AppColors.primary
                                 : AppColors.textSecondary,
                             fontSize: 11,
-                            fontWeight: v.pagos.length > 1 ? FontWeight.w700 : null,
+                            fontWeight:
+                                v.pagos.length > 1 ? FontWeight.w700 : null,
                           ),
                         ),
                         if (v.pagos.length > 1) ...[
@@ -686,9 +893,9 @@ class _VentasPageState extends State<VentasPage> {
                               color: AppColors.primary.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(3),
                             ),
-                            child: Text(
+                            child: const Text(
                               'MIXTO',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
@@ -725,7 +932,8 @@ class _VentasPageState extends State<VentasPage> {
                     icon: const Icon(Icons.print, size: 14),
                     label: const Text('Reimprimir'),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -767,7 +975,8 @@ class _ToggleBtn extends StatelessWidget {
         child: Row(
           children: [
             Icon(icon,
-                size: 14, color: activo ? Colors.white : AppColors.textPrimary),
+                size: 14,
+                color: activo ? Colors.white : AppColors.textPrimary),
             const SizedBox(width: 4),
             Text(label,
                 style: TextStyle(
@@ -784,28 +993,42 @@ class _ToggleBtn extends StatelessWidget {
 
 class _ProductoCard extends StatelessWidget {
   const _ProductoCard({required this.producto, required this.onTap});
-  final _ProductoDemo producto;
+  final ProductoModel producto;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final sinStock =
+        !producto.esServicio && producto.stock <= 0;
     return InkWell(
-      onTap: onTap,
+      onTap: sinStock ? null : onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: sinStock
+              ? AppColors.background
+              : Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(
+            color: sinStock
+                ? AppColors.error.withValues(alpha: 0.3)
+                : AppColors.border,
+          ),
         ),
         child: Column(
           children: [
-            Text(producto.emoji, style: const TextStyle(fontSize: 36)),
+            Icon(
+              producto.esServicio
+                  ? Icons.miscellaneous_services
+                  : Icons.inventory_2,
+              size: 36,
+              color: AppColors.primary,
+            ),
             const SizedBox(height: 6),
             Expanded(
               child: Text(
-                producto.nombre,
+                producto.descripcion,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -818,13 +1041,29 @@ class _ProductoCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              CurrencyFormatter.format(producto.precio),
+              CurrencyFormatter.format(producto.precioVenta),
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
             ),
+            if (!producto.esServicio)
+              Text(
+                sinStock
+                    ? 'Sin stock'
+                    : 'Stock: ${producto.stock.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: sinStock
+                      ? AppColors.error
+                      : (producto.stockBajo
+                          ? AppColors.warning
+                          : AppColors.textSecondary),
+                  fontWeight:
+                      sinStock || producto.stockBajo ? FontWeight.w700 : null,
+                ),
+              ),
           ],
         ),
       ),
@@ -878,24 +1117,13 @@ class _CantidadStepper extends StatelessWidget {
   }
 }
 
-// _PagoBtn eliminado: ahora el flujo de pago lo maneja MultiplePagosDialog,
-// que soporta pago mixto (varias formas de pago en una sola venta).
-
 // ─────────────── Modelos ───────────────
-
-class _ProductoDemo {
-  const _ProductoDemo(this.nombre, this.precio, this.emoji, this.categoria);
-  final String nombre;
-  final double precio;
-  final String emoji;
-  final String categoria;
-}
 
 class _CarritoItem {
   _CarritoItem(this.producto, this.cantidad);
-  final _ProductoDemo producto;
+  final ProductoModel producto;
   int cantidad;
-  double get subtotal => producto.precio * cantidad;
+  double get subtotal => producto.precioVenta * cantidad;
 }
 
 class _VentaRegistrada {
@@ -919,12 +1147,8 @@ class _VentaRegistrada {
   final String? cliente;
   final String? docCliente;
   final String? direccionCliente;
-
-  /// Lista de pagos parciales. Una venta puede tener varias formas de pago
-  /// (pago mixto). La suma de pagos[].monto == total.
   final List<PagoParcial> pagos;
 
-  /// Resumen legible: "Efectivo", "Yape + Plin", "Mixto (...)"
   String get formaPagoResumen {
     if (pagos.length == 1) return pagos.first.formaPago.label;
     if (pagos.length == 2) {

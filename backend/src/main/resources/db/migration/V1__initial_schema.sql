@@ -1,197 +1,199 @@
 -- ============================================================
--- V1 — Schema inicial Sistema Gestion Bodega
+-- V1 — Schema inicial (MySQL 8 / MariaDB)
 -- ============================================================
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================
 -- USUARIOS
 -- ============================================================
-CREATE TYPE rol_usuario AS ENUM ('VENDEDOR', 'ENCARGADO', 'ADMINISTRADOR');
-
 CREATE TABLE usuarios (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     nombre_completo VARCHAR(150) NOT NULL,
-    rol rol_usuario NOT NULL DEFAULT 'VENDEDOR',
+    rol ENUM('VENDEDOR', 'ENCARGADO', 'ADMINISTRADOR') NOT NULL DEFAULT 'VENDEDOR',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    actualizado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
 );
 
 -- ============================================================
 -- PROVEEDORES
 -- ============================================================
 CREATE TABLE proveedores (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     razon_social VARCHAR(200) NOT NULL,
     ruc VARCHAR(11) UNIQUE NOT NULL,
     direccion TEXT,
     telefono VARCHAR(20),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    actualizado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
 );
 
 -- ============================================================
 -- PRODUCTOS
 -- ============================================================
 CREATE TABLE productos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     codigo VARCHAR(50) UNIQUE,
     descripcion VARCHAR(200) NOT NULL,
-    stock NUMERIC(10,2) NOT NULL DEFAULT 0,
-    stock_minimo NUMERIC(10,2) NOT NULL DEFAULT 0,
+    stock DECIMAL(10,2) NOT NULL DEFAULT 0,
+    stock_minimo DECIMAL(10,2) NOT NULL DEFAULT 0,
     es_servicio BOOLEAN NOT NULL DEFAULT FALSE,
     usa_contometro BOOLEAN NOT NULL DEFAULT FALSE,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    actualizado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    FULLTEXT KEY idx_productos_descripcion (descripcion)
 );
-
-CREATE INDEX idx_productos_descripcion ON productos USING gin (to_tsvector('spanish', descripcion));
 
 CREATE TABLE producto_precios (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
-    costo NUMERIC(10,2) NOT NULL,
-    precio_venta NUMERIC(10,2) NOT NULL,
-    vigente_desde TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    producto_id CHAR(36) NOT NULL,
+    costo DECIMAL(10,2) NOT NULL,
+    precio_venta DECIMAL(10,2) NOT NULL,
+    vigente_desde DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_producto_precios_producto FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE,
+    INDEX idx_producto_precios_vigencia (producto_id, vigente_desde DESC)
 );
-
-CREATE INDEX idx_producto_precios_vigencia ON producto_precios(producto_id, vigente_desde DESC);
 
 -- ============================================================
 -- COMPRAS
 -- ============================================================
 CREATE TABLE compras (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    proveedor_id UUID NOT NULL REFERENCES proveedores(id),
-    usuario_id UUID NOT NULL REFERENCES usuarios(id),
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    total NUMERIC(10,2) NOT NULL,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    proveedor_id CHAR(36) NOT NULL,
+    usuario_id CHAR(36) NOT NULL,
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    total DECIMAL(10,2) NOT NULL,
     nro_documento VARCHAR(50),
     observaciones TEXT,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_compras_proveedor FOREIGN KEY (proveedor_id) REFERENCES proveedores(id),
+    CONSTRAINT fk_compras_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
 
 CREATE TABLE compra_detalle (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    compra_id UUID NOT NULL REFERENCES compras(id) ON DELETE CASCADE,
-    producto_id UUID NOT NULL REFERENCES productos(id),
-    cantidad NUMERIC(10,2) NOT NULL,
-    costo_unitario NUMERIC(10,2) NOT NULL,
-    subtotal NUMERIC(10,2) NOT NULL
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    compra_id CHAR(36) NOT NULL,
+    producto_id CHAR(36) NOT NULL,
+    cantidad DECIMAL(10,2) NOT NULL,
+    costo_unitario DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    CONSTRAINT fk_compra_detalle_compra FOREIGN KEY (compra_id) REFERENCES compras(id) ON DELETE CASCADE,
+    CONSTRAINT fk_compra_detalle_producto FOREIGN KEY (producto_id) REFERENCES productos(id)
 );
 
 -- ============================================================
 -- CAJAS / TURNOS
 -- ============================================================
-CREATE TYPE tipo_turno AS ENUM ('DIA', 'NOCHE');
-CREATE TYPE estado_caja AS ENUM ('ABIERTA', 'CERRADA');
-
 CREATE TABLE cajas (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    usuario_id UUID NOT NULL REFERENCES usuarios(id),
-    turno tipo_turno NOT NULL,
-    fecha_apertura TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    fecha_cierre TIMESTAMPTZ,
-    monto_apertura NUMERIC(10,2) NOT NULL DEFAULT 0,
-    monto_cierre NUMERIC(10,2),
-    contometro_inicio INTEGER,
-    contometro_fin INTEGER,
-    estado estado_caja NOT NULL DEFAULT 'ABIERTA'
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    usuario_id CHAR(36) NOT NULL,
+    turno ENUM('DIA', 'NOCHE') NOT NULL,
+    fecha_apertura DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    fecha_cierre DATETIME(6),
+    monto_apertura DECIMAL(10,2) NOT NULL DEFAULT 0,
+    monto_cierre DECIMAL(10,2),
+    contometro_inicio INT,
+    contometro_fin INT,
+    estado ENUM('ABIERTA', 'CERRADA') NOT NULL DEFAULT 'ABIERTA',
+    CONSTRAINT fk_cajas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
 
 CREATE TABLE avances_efectivo (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    caja_id UUID NOT NULL REFERENCES cajas(id) ON DELETE CASCADE,
-    monto NUMERIC(10,2) NOT NULL,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    caja_id CHAR(36) NOT NULL,
+    monto DECIMAL(10,2) NOT NULL,
     observacion TEXT,
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_avances_caja FOREIGN KEY (caja_id) REFERENCES cajas(id) ON DELETE CASCADE
 );
 
 -- ============================================================
 -- VENTAS
 -- ============================================================
-CREATE TYPE forma_pago AS ENUM ('EFECTIVO', 'YAPE', 'PLIN', 'NIUBIZ', 'CREDITO');
-
 CREATE TABLE ventas (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    caja_id UUID NOT NULL REFERENCES cajas(id),
-    usuario_id UUID NOT NULL REFERENCES usuarios(id),
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    total NUMERIC(10,2) NOT NULL,
-    forma_pago forma_pago NOT NULL,
-    trabajador_credito_id UUID REFERENCES usuarios(id),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    caja_id CHAR(36) NOT NULL,
+    usuario_id CHAR(36) NOT NULL,
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    total DECIMAL(10,2) NOT NULL,
+    forma_pago ENUM('EFECTIVO', 'YAPE', 'PLIN', 'NIUBIZ', 'CREDITO'),
+    trabajador_credito_id CHAR(36),
     anulada BOOLEAN NOT NULL DEFAULT FALSE,
-    anulada_por UUID REFERENCES usuarios(id),
-    motivo_anulacion TEXT
+    anulada_por CHAR(36),
+    motivo_anulacion TEXT,
+    CONSTRAINT fk_ventas_caja FOREIGN KEY (caja_id) REFERENCES cajas(id),
+    CONSTRAINT fk_ventas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_ventas_trabajador FOREIGN KEY (trabajador_credito_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_ventas_anulada_por FOREIGN KEY (anulada_por) REFERENCES usuarios(id),
+    INDEX idx_ventas_fecha (fecha DESC),
+    INDEX idx_ventas_caja (caja_id)
 );
 
-CREATE INDEX idx_ventas_fecha ON ventas(fecha DESC);
-CREATE INDEX idx_ventas_caja ON ventas(caja_id);
-
 CREATE TABLE venta_detalle (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    venta_id UUID NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
-    producto_id UUID NOT NULL REFERENCES productos(id),
-    cantidad NUMERIC(10,2) NOT NULL,
-    precio_unitario NUMERIC(10,2) NOT NULL,
-    subtotal NUMERIC(10,2) NOT NULL
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    venta_id CHAR(36) NOT NULL,
+    producto_id CHAR(36) NOT NULL,
+    cantidad DECIMAL(10,2) NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    CONSTRAINT fk_venta_detalle_venta FOREIGN KEY (venta_id) REFERENCES ventas(id) ON DELETE CASCADE,
+    CONSTRAINT fk_venta_detalle_producto FOREIGN KEY (producto_id) REFERENCES productos(id)
 );
 
 -- ============================================================
 -- MERMAS
 -- ============================================================
-CREATE TYPE motivo_merma AS ENUM ('VENCIMIENTO', 'DETERIORO', 'OTRO');
-
 CREATE TABLE mermas (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    producto_id UUID NOT NULL REFERENCES productos(id),
-    usuario_id UUID NOT NULL REFERENCES usuarios(id),
-    cantidad NUMERIC(10,2) NOT NULL,
-    motivo motivo_merma NOT NULL,
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    producto_id CHAR(36) NOT NULL,
+    usuario_id CHAR(36) NOT NULL,
+    cantidad DECIMAL(10,2) NOT NULL,
+    motivo ENUM('VENCIMIENTO', 'DETERIORO', 'OTRO') NOT NULL,
     observacion TEXT,
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_mermas_producto FOREIGN KEY (producto_id) REFERENCES productos(id),
+    CONSTRAINT fk_mermas_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
 
 -- ============================================================
 -- CREDITO A TRABAJADORES
 -- ============================================================
 CREATE TABLE creditos_trabajadores (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    trabajador_id UUID NOT NULL REFERENCES usuarios(id),
-    venta_id UUID REFERENCES ventas(id),
-    monto NUMERIC(10,2) NOT NULL,
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    trabajador_id CHAR(36) NOT NULL,
+    venta_id CHAR(36),
+    monto DECIMAL(10,2) NOT NULL,
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     cerrado BOOLEAN NOT NULL DEFAULT FALSE,
-    cerrado_en TIMESTAMPTZ
+    cerrado_en DATETIME(6),
+    CONSTRAINT fk_creditos_trabajador FOREIGN KEY (trabajador_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_creditos_venta FOREIGN KEY (venta_id) REFERENCES ventas(id)
 );
 
 CREATE TABLE deuda_trabajadores (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    trabajador_id UUID NOT NULL REFERENCES usuarios(id),
-    monto_total NUMERIC(10,2) NOT NULL DEFAULT 0,
-    actualizada_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    trabajador_id CHAR(36) NOT NULL UNIQUE,
+    monto_total DECIMAL(10,2) NOT NULL DEFAULT 0,
+    actualizada_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_deuda_trabajador FOREIGN KEY (trabajador_id) REFERENCES usuarios(id)
 );
-
-CREATE UNIQUE INDEX idx_deuda_trabajador ON deuda_trabajadores(trabajador_id);
 
 -- ============================================================
 -- AUDITORIA
 -- ============================================================
 CREATE TABLE auditoria (
-    id BIGSERIAL PRIMARY KEY,
-    usuario_id UUID REFERENCES usuarios(id),
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id CHAR(36),
     accion VARCHAR(50) NOT NULL,
     tabla VARCHAR(50) NOT NULL,
     registro_id VARCHAR(100),
-    datos_previos JSONB,
-    datos_nuevos JSONB,
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    datos_previos JSON,
+    datos_nuevos JSON,
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_auditoria_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    INDEX idx_auditoria_fecha (fecha DESC),
+    INDEX idx_auditoria_usuario (usuario_id)
 );
-
-CREATE INDEX idx_auditoria_fecha ON auditoria(fecha DESC);
-CREATE INDEX idx_auditoria_usuario ON auditoria(usuario_id);

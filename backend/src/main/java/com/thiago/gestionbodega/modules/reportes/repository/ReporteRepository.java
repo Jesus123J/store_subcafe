@@ -13,7 +13,7 @@ import java.util.UUID;
 
 /**
  * Queries agregadas para los reportes. Usa JdbcTemplate para tener mas
- * control sobre las queries nativas con PostgreSQL.
+ * control sobre las queries nativas con MySQL/MariaDB.
  */
 @Repository
 @RequiredArgsConstructor
@@ -47,7 +47,7 @@ public class ReporteRepository {
 
     public Map<String, BigDecimal> totalPorFormaPago(LocalDate desde, LocalDate hasta) {
         var sql = """
-                SELECT vp.forma_pago::text AS forma, COALESCE(SUM(vp.monto), 0) AS total
+                SELECT vp.forma_pago AS forma, COALESCE(SUM(vp.monto), 0) AS total
                 FROM venta_pagos vp
                 JOIN ventas v ON v.id = vp.venta_id
                 WHERE v.anulada = false
@@ -65,7 +65,7 @@ public class ReporteRepository {
 
     public Map<String, BigDecimal> totalPorTurno(LocalDate desde, LocalDate hasta) {
         var sql = """
-                SELECT c.turno::text AS turno, COALESCE(SUM(v.total), 0) AS total
+                SELECT c.turno AS turno, COALESCE(SUM(v.total), 0) AS total
                 FROM ventas v
                 JOIN cajas c ON c.id = v.caja_id
                 WHERE v.anulada = false

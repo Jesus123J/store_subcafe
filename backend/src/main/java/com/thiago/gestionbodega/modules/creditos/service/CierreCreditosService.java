@@ -84,17 +84,18 @@ public class CierreCreditosService {
 
         // 3) Por cada trabajador, sumar a su deuda_trabajadores
         for (var row : totales) {
-            UUID trabajadorId = (UUID) row.get("trabajador_id");
+            // En MySQL los UUID se almacenan como CHAR(36) → vuelven como String
+            String trabajadorId = String.valueOf(row.get("trabajador_id"));
             BigDecimal monto = (BigDecimal) row.get("total");
             montoTotalGeneral = montoTotalGeneral.add(monto);
 
-            // UPSERT: si ya tenia deuda acumulada, sumamos
+            // UPSERT MySQL: si ya tenia deuda acumulada, sumamos
             jdbc.update("""
                     INSERT INTO deuda_trabajadores (trabajador_id, monto_total, actualizada_en)
                     VALUES (:tid, :monto, NOW())
-                    ON CONFLICT (trabajador_id) DO UPDATE
-                      SET monto_total = deuda_trabajadores.monto_total + EXCLUDED.monto_total,
-                          actualizada_en = NOW()
+                    ON DUPLICATE KEY UPDATE
+                      monto_total = monto_total + VALUES(monto_total),
+                      actualizada_en = NOW()
                     """,
                     new MapSqlParameterSource()
                             .addValue("tid", trabajadorId)
@@ -120,11 +121,11 @@ public class CierreCreditosService {
                 VALUES (:id, :a, :m, :fecha, :userId, :trabajadores, :monto)
                 """,
                 new MapSqlParameterSource()
-                        .addValue("id", cierreId)
+                        .addValue("id", cierreId.toString())
                         .addValue("a", periodoAnio)
                         .addValue("m", periodoMes)
                         .addValue("fecha", ahora)
-                        .addValue("userId", admin.getId())
+                        .addValue("userId", admin.getId().toString())
                         .addValue("trabajadores", totales.size())
                         .addValue("monto", montoTotalGeneral));
 
@@ -144,7 +145,7 @@ public class CierreCreditosService {
     /** Lista de creditos del mes actual agrupados por trabajador. */
     public List<Map<String, Object>> creditosDelMes() {
         return jdbc.queryForList("""
-                SELECT trabajador_id, username, nombre_completo,
+                SELECT trabajador_id, dni, nombre_completo,
                        cantidad_consumos, monto_pendiente, ultimo_consumo,
                        anio, mes
                 FROM v_creditos_del_mes
@@ -155,7 +156,7 @@ public class CierreCreditosService {
     /** Deuda acumulada (planilla) por trabajador. */
     public List<Map<String, Object>> deudaAcumulada() {
         return jdbc.queryForList("""
-                SELECT trabajador_id, username, nombre_completo,
+                SELECT trabajador_id, dni, nombre_completo,
                        deuda_acumulada, actualizada_en
                 FROM v_deuda_trabajadores_acumulada
                 ORDER BY deuda_acumulada DESC

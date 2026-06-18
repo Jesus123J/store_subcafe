@@ -21,6 +21,8 @@ public class Caja {
 
     @Id
     @GeneratedValue
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -28,8 +30,7 @@ public class Caja {
     private Usuario usuario;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "turno", nullable = false, columnDefinition = "tipo_turno")
+    @Column(name = "turno", nullable = false, length = 10)
     private TipoTurno turno;
 
     @Column(name = "fecha_apertura", nullable = false)
@@ -51,7 +52,6 @@ public class Caja {
     private Integer contometroFin;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "estado", nullable = false, columnDefinition = "estado_caja")
+    @Column(name = "estado", nullable = false, length = 10)
     private EstadoCaja estado;
 }

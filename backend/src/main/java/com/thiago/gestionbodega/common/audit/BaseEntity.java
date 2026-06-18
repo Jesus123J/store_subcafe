@@ -3,6 +3,8 @@ package com.thiago.gestionbodega.common.audit;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -10,6 +12,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * Base de las entidades: id UUID + auditoria automatica.
+ *
+ * En MySQL/MariaDB el UUID se guarda como CHAR(36). Usamos {@link SqlTypes#CHAR}
+ * para forzar a Hibernate a almacenarlo como string y que coincida con la
+ * columna {@code CHAR(36)} definida en las migraciones.
+ */
 @Getter
 @Setter
 @MappedSuperclass
@@ -18,7 +27,8 @@ public abstract class BaseEntity {
 
     @Id
     @GeneratedValue
-    @Column(name = "id", updatable = false, nullable = false)
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(name = "id", updatable = false, nullable = false, length = 36)
     private UUID id;
 
     @CreatedDate
