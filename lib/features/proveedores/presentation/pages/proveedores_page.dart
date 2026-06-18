@@ -38,7 +38,7 @@ class ProveedoresPage extends ConsumerWidget {
                     builder: (_) => const ProveedorFormDialog(),
                   );
                   if (ok == true && context.mounted) {
-                    context.showSnack('Proveedor guardado (demo)');
+                    context.showSnack('Proveedor registrado');
                   }
                 },
                 icon: const Icon(Icons.add),

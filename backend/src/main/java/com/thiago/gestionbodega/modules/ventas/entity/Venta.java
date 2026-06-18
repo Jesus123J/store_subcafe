@@ -1,6 +1,7 @@
 package com.thiago.gestionbodega.modules.ventas.entity;
 
 import com.thiago.gestionbodega.modules.cajas.entity.Caja;
+import com.thiago.gestionbodega.modules.clientes.entity.Cliente;
 import com.thiago.gestionbodega.modules.usuarios.entity.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -24,6 +25,8 @@ public class Venta {
 
     @Id
     @GeneratedValue
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -47,17 +50,17 @@ public class Venta {
      */
     @Deprecated
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "forma_pago", columnDefinition = "forma_pago")
+    @Column(name = "forma_pago", length = 10)
     private FormaPago formaPago;
 
     /**
      * @deprecated Desde V3 - usar {@code pagos[i].trabajadorCredito}.
+     * Desde V7 apunta a {@link Cliente} (con es_trabajador = TRUE), no a Usuario.
      */
     @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trabajador_credito_id")
-    private Usuario trabajadorCredito;
+    private Cliente trabajadorCredito;
 
     /**
      * Pagos parciales que conforman el total de la venta.

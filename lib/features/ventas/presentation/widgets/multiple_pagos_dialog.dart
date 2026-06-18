@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../trabajadores/data/models/trabajador_dto.dart';
+import '../../../trabajadores/presentation/providers/trabajadores_provider.dart';
 
 /// Forma de pago aceptada en el POS.
 enum FormaPago {
@@ -21,16 +24,21 @@ enum FormaPago {
 }
 
 /// Un pago parcial: forma de pago + monto + (opcional) código de operación.
+/// Si formaPago == CREDITO, [trabajadorId] y [trabajadorNombre] estan presentes.
 class PagoParcial {
   PagoParcial({
     required this.formaPago,
     required this.monto,
     this.codigoOperacion,
+    this.trabajadorId,
+    this.trabajadorNombre,
   });
 
   final FormaPago formaPago;
   final double monto;
   final String? codigoOperacion;
+  final String? trabajadorId;
+  final String? trabajadorNombre;
 }
 
 /// Diálogo que permite al vendedor distribuir el total entre N formas de pago.
@@ -342,6 +350,15 @@ class _PagoTile extends StatelessWidget {
                       fontFamily: 'monospace',
                     ),
                   ),
+                if (pago.trabajadorNombre != null)
+                  Text(
+                    'Trabajador: ${pago.trabajadorNombre}',
+                    style: const TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -367,19 +384,20 @@ class _PagoTile extends StatelessWidget {
 }
 
 /// Sheet/diálogo para agregar un pago parcial.
-class _AgregarPagoSheet extends StatefulWidget {
+class _AgregarPagoSheet extends ConsumerStatefulWidget {
   const _AgregarPagoSheet({required this.montoSugerido});
   final double montoSugerido;
 
   @override
-  State<_AgregarPagoSheet> createState() => _AgregarPagoSheetState();
+  ConsumerState<_AgregarPagoSheet> createState() => _AgregarPagoSheetState();
 }
 
-class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
+class _AgregarPagoSheetState extends ConsumerState<_AgregarPagoSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _montoCtrl;
   final _codigoCtrl = TextEditingController();
   FormaPago _forma = FormaPago.efectivo;
+  TrabajadorDto? _trabajador;
 
   @override
   void initState() {
@@ -398,12 +416,16 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
     if (!_formKey.currentState!.validate()) return;
     final monto = double.tryParse(_montoCtrl.text) ?? 0;
     if (monto <= 0) return;
+    if (_forma == FormaPago.credito && _trabajador == null) return;
     Navigator.of(context).pop(PagoParcial(
       formaPago: _forma,
       monto: monto,
       codigoOperacion: _forma.requiereCodigo && _codigoCtrl.text.isNotEmpty
           ? _codigoCtrl.text.trim()
           : null,
+      trabajadorId: _forma == FormaPago.credito ? _trabajador?.id : null,
+      trabajadorNombre:
+          _forma == FormaPago.credito ? _trabajador?.nombreCompleto : null,
     ));
   }
 
@@ -517,6 +539,13 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
                   ),
                 ),
               ],
+              if (_forma == FormaPago.credito) ...[
+                const SizedBox(height: 12),
+                _SelectorTrabajador(
+                  value: _trabajador,
+                  onChanged: (t) => setState(() => _trabajador = t),
+                ),
+              ],
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -527,7 +556,9 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
                   ),
                   const SizedBox(width: 4),
                   FilledButton(
-                    onPressed: _confirmar,
+                    onPressed: (_forma == FormaPago.credito && _trabajador == null)
+                        ? null
+                        : _confirmar,
                     child: const Text('Agregar'),
                   ),
                 ],
@@ -536,6 +567,95 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Selector de trabajador para pagos a credito. Carga desde el provider
+/// compartido (GET /clientes con esTrabajador=true) y muestra DNI + nombre.
+class _SelectorTrabajador extends ConsumerWidget {
+  const _SelectorTrabajador({required this.value, required this.onChanged});
+
+  final TrabajadorDto? value;
+  final ValueChanged<TrabajadorDto?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trabajadoresAsync = ref.watch(trabajadoresProvider);
+
+    return trabajadoresAsync.when(
+      loading: () => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text('Cargando trabajadores...',
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+          ],
+        ),
+      ),
+      error: (e, _) => Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text('No se pudo cargar trabajadores: $e',
+            style: const TextStyle(color: AppColors.error, fontSize: 12)),
+      ),
+      data: (lista) {
+        if (lista.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.warning_amber, color: AppColors.warning, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'No hay trabajadores registrados. Regístralos primero en Trabajadores.',
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return DropdownButtonFormField<TrabajadorDto>(
+          value: value,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Trabajador *',
+            prefixIcon: Icon(Icons.badge),
+            isDense: true,
+          ),
+          items: lista
+              .map((t) => DropdownMenuItem(
+                    value: t,
+                    child: Text(
+                      '${t.dni} — ${t.nombreCompleto}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged: onChanged,
+        );
+      },
     );
   }
 }

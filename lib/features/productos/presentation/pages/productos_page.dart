@@ -47,7 +47,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                     builder: (_) => const ProductoFormDialog(),
                   );
                   if (ok == true && context.mounted) {
-                    context.showSnack('Producto guardado (demo)');
+                    context.showSnack('Producto registrado');
                   }
                 },
                 icon: const Icon(Icons.add),

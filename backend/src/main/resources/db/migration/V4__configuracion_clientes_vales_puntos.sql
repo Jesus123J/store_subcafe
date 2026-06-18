@@ -1,16 +1,15 @@
 -- ============================================================
--- V4 — Configuracion, Clientes (trabajadores externos), Vales y Puntos
+-- V4 — Configuracion, Clientes, Vales y Puntos (MySQL)
 -- ============================================================
 
 -- ============================================================
--- CONFIGURACION (Issue #6)
+-- CONFIGURACION
 -- ============================================================
--- Tabla key-value para todos los datos editables del negocio
 CREATE TABLE configuracion (
     clave VARCHAR(80) PRIMARY KEY,
     valor TEXT,
     descripcion TEXT,
-    actualizada_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    actualizada_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
 );
 
 INSERT INTO configuracion (clave, valor, descripcion) VALUES
@@ -25,111 +24,99 @@ INSERT INTO configuracion (clave, valor, descripcion) VALUES
 
 
 -- ============================================================
--- CLIENTES / TRABAJADORES (Issue #5)
+-- CLIENTES / TRABAJADORES
 -- ============================================================
--- Tabla para trabajadores del negocio donde se entregan vales/puntos.
--- Importable desde el sistema viejo de prestamos.
 CREATE TABLE clientes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     dni VARCHAR(8) UNIQUE NOT NULL,
     nombres VARCHAR(150) NOT NULL,
     apellidos VARCHAR(150) NOT NULL,
     telefono VARCHAR(20),
     es_trabajador BOOLEAN NOT NULL DEFAULT TRUE,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_clientes_dni ON clientes(dni);
-CREATE INDEX idx_clientes_nombre ON clientes USING gin (
-    to_tsvector('spanish', nombres || ' ' || apellidos)
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    actualizado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    INDEX idx_clientes_dni (dni),
+    FULLTEXT KEY idx_clientes_nombre (nombres, apellidos)
 );
 
 
 -- ============================================================
--- VALES A TRABAJADORES (Issue #2)
+-- VALES A TRABAJADORES
 -- ============================================================
-CREATE TYPE tipo_vale AS ENUM ('CASH', 'NOMBRADO');
-CREATE TYPE estado_vale AS ENUM ('ACTIVO', 'CONSUMIDO', 'VENCIDO', 'ANULADO');
-
 CREATE TABLE vales (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo VARCHAR(20) UNIQUE NOT NULL,         -- ej: V-2026-000001
-    tipo tipo_vale NOT NULL,
-    cliente_id UUID REFERENCES clientes(id),    -- NULL si es CASH (al portador)
-    monto_inicial NUMERIC(10,2) NOT NULL CHECK (monto_inicial > 0),
-    saldo NUMERIC(10,2) NOT NULL CHECK (saldo >= 0),
-    estado estado_vale NOT NULL DEFAULT 'ACTIVO',
-    fecha_emision TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    fecha_vencimiento DATE,                     -- NULL = sin vencer
-    emitido_por UUID REFERENCES usuarios(id),
-    observaciones TEXT
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    codigo VARCHAR(20) UNIQUE NOT NULL,
+    tipo ENUM('CASH', 'NOMBRADO') NOT NULL,
+    cliente_id CHAR(36),
+    monto_inicial DECIMAL(10,2) NOT NULL CHECK (monto_inicial > 0),
+    saldo DECIMAL(10,2) NOT NULL CHECK (saldo >= 0),
+    estado ENUM('ACTIVO', 'CONSUMIDO', 'VENCIDO', 'ANULADO') NOT NULL DEFAULT 'ACTIVO',
+    fecha_emision DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    fecha_vencimiento DATE,
+    emitido_por CHAR(36),
+    observaciones TEXT,
+    CONSTRAINT fk_vales_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+    CONSTRAINT fk_vales_emisor FOREIGN KEY (emitido_por) REFERENCES usuarios(id),
+    INDEX idx_vales_codigo (codigo),
+    INDEX idx_vales_cliente (cliente_id),
+    INDEX idx_vales_estado (estado)
 );
 
-CREATE INDEX idx_vales_codigo ON vales(codigo);
-CREATE INDEX idx_vales_cliente ON vales(cliente_id) WHERE cliente_id IS NOT NULL;
-CREATE INDEX idx_vales_estado ON vales(estado);
-
--- Movimientos: cada uso parcial o total del vale
 CREATE TABLE vale_movimientos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    vale_id UUID NOT NULL REFERENCES vales(id) ON DELETE CASCADE,
-    venta_id UUID REFERENCES ventas(id),
-    monto NUMERIC(10,2) NOT NULL,
-    saldo_despues NUMERIC(10,2) NOT NULL,
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    usuario_id UUID REFERENCES usuarios(id)
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    vale_id CHAR(36) NOT NULL,
+    venta_id CHAR(36),
+    monto DECIMAL(10,2) NOT NULL,
+    saldo_despues DECIMAL(10,2) NOT NULL,
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    usuario_id CHAR(36),
+    CONSTRAINT fk_vm_vale FOREIGN KEY (vale_id) REFERENCES vales(id) ON DELETE CASCADE,
+    CONSTRAINT fk_vm_venta FOREIGN KEY (venta_id) REFERENCES ventas(id),
+    CONSTRAINT fk_vm_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    INDEX idx_vale_movimientos_vale (vale_id)
 );
 
-CREATE INDEX idx_vale_movimientos_vale ON vale_movimientos(vale_id);
-
 
 -- ============================================================
--- PUNTOS POR CONSUMO (Issue #3)
+-- PUNTOS POR CONSUMO
 -- ============================================================
--- Reglas de acumulacion (1 regla activa a la vez; historico)
 CREATE TABLE reglas_puntos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     descripcion VARCHAR(200) NOT NULL,
-    soles_por_punto NUMERIC(10,2) NOT NULL CHECK (soles_por_punto > 0),
+    soles_por_punto DECIMAL(10,2) NOT NULL CHECK (soles_por_punto > 0),
     activa BOOLEAN NOT NULL DEFAULT TRUE,
-    vigente_desde TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    vigente_hasta TIMESTAMPTZ,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    vigente_desde DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    vigente_hasta DATETIME(6),
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
 );
 
--- Regla por defecto: 1 punto por cada S/. 10 de consumo (ajustable)
 INSERT INTO reglas_puntos (descripcion, soles_por_punto)
 VALUES ('Regla base: 1 punto por cada S/. 10 de consumo', 10.00);
 
--- Catalogo de productos canjeables por puntos (lo define el admin)
 CREATE TABLE productos_canjeables (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
-    puntos_requeridos NUMERIC(10,2) NOT NULL CHECK (puntos_requeridos > 0),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    producto_id CHAR(36) NOT NULL UNIQUE,
+    puntos_requeridos DECIMAL(10,2) NOT NULL CHECK (puntos_requeridos > 0),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
-    creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (producto_id)
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_canjeables_producto FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE
 );
-
--- Movimientos de puntos: + por compra, - por canje
-CREATE TYPE tipo_movimiento_puntos AS ENUM ('ACUMULACION', 'CANJE', 'AJUSTE', 'VENCIMIENTO');
 
 CREATE TABLE movimientos_puntos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    cliente_id UUID NOT NULL REFERENCES clientes(id),
-    tipo tipo_movimiento_puntos NOT NULL,
-    puntos NUMERIC(10,2) NOT NULL,           -- positivo o negativo segun tipo
-    saldo_despues NUMERIC(10,2) NOT NULL,
-    venta_id UUID REFERENCES ventas(id),
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    cliente_id CHAR(36) NOT NULL,
+    tipo ENUM('ACUMULACION', 'CANJE', 'AJUSTE', 'VENCIMIENTO') NOT NULL,
+    puntos DECIMAL(10,2) NOT NULL,
+    saldo_despues DECIMAL(10,2) NOT NULL,
+    venta_id CHAR(36),
     observacion TEXT,
-    fecha TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    fecha DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_mp_cliente FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+    CONSTRAINT fk_mp_venta FOREIGN KEY (venta_id) REFERENCES ventas(id),
+    INDEX idx_mp_cliente (cliente_id, fecha DESC)
 );
 
-CREATE INDEX idx_movimientos_puntos_cliente ON movimientos_puntos(cliente_id, fecha DESC);
-
--- Vista helper: saldo actual de puntos por cliente
 CREATE OR REPLACE VIEW v_puntos_por_cliente AS
 SELECT c.id AS cliente_id,
        c.dni,

@@ -121,6 +121,41 @@ class AppTheme {
       tooltipTheme: const TooltipThemeData(
         textStyle: TextStyle(color: Colors.white, fontSize: 12),
       ),
+
+      // SnackBar: fondo oscuro + texto blanco explicito.
+      // Sin esto el textTheme global pinta el contenido en gris oscuro
+      // y queda casi invisible sobre el fondo negro por defecto de M3.
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.textPrimary,
+        contentTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+        actionTextColor: Colors.white,
+      ),
+
+      // Dialog: fondo blanco explicito y texto oscuro
+      // (M3 puede aplicar tono inverso si la app entra en theme dark).
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        titleTextStyle: TextStyle(
+          color: base,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: TextStyle(color: base, fontSize: 14),
+      ),
+
+      // PopupMenu / DropdownMenu: fondo blanco con texto oscuro,
+      // evita combinaciones oscuro-sobre-oscuro al desplegar.
+      popupMenuTheme: const PopupMenuThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.white,
+        textStyle: TextStyle(color: base, fontSize: 14),
+      ),
     );
   }
 

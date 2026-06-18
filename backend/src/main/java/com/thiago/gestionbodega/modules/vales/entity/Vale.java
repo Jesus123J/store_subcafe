@@ -18,14 +18,15 @@ import java.util.UUID;
 public class Vale {
 
     @Id @GeneratedValue
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
     private UUID id;
 
     @Column(name = "codigo", unique = true, nullable = false, length = 20)
     private String codigo;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "tipo", nullable = false, columnDefinition = "tipo_vale")
+    @Column(name = "tipo", nullable = false, length = 10)
     private TipoVale tipo;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -39,8 +40,7 @@ public class Vale {
     private BigDecimal saldo;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "estado", nullable = false, columnDefinition = "estado_vale")
+    @Column(name = "estado", nullable = false, length = 12)
     private EstadoVale estado;
 
     @Column(name = "fecha_emision", nullable = false)

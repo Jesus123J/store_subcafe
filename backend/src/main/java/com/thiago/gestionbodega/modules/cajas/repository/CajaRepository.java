@@ -33,7 +33,7 @@ public interface CajaRepository extends JpaRepository<Caja, UUID> {
      * Retorna lista de arrays [formaPago: String, total: BigDecimal].
      */
     @Query(value = """
-            SELECT vp.forma_pago::text, COALESCE(SUM(vp.monto), 0)
+            SELECT vp.forma_pago, COALESCE(SUM(vp.monto), 0)
             FROM venta_pagos vp
             JOIN ventas v ON v.id = vp.venta_id
             WHERE v.caja_id = :cajaId AND v.anulada = false
