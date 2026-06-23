@@ -2,10 +2,12 @@ package com.thiago.gestionbodega;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
+/**
+ * {@code @EnableJpaAuditing} esta en {@link com.thiago.gestionbodega.config.JpaAuditingConfig}
+ * para poder configurar el {@code DateTimeProvider} con {@code OffsetDateTime}.
+ */
 @SpringBootApplication
-@EnableJpaAuditing
 public class GestionBodegaApplication {
 
     public static void main(String[] args) {

@@ -4,6 +4,8 @@ import com.thiago.gestionbodega.modules.proveedores.entity.Proveedor;
 import com.thiago.gestionbodega.modules.usuarios.entity.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -20,6 +22,8 @@ public class Compra {
 
     @Id
     @GeneratedValue
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(length = 36)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

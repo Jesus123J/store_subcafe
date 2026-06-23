@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/validators.dart';
+import '../providers/productos_provider.dart';
 
-/// Form para crear/editar producto. Por ahora muestra el dato pero no envía a BD
-/// (el backend aún no tiene POST /productos implementado).
-class ProductoFormDialog extends StatefulWidget {
+/// Form para crear producto. Envia POST /productos y refresca la lista al cerrar.
+class ProductoFormDialog extends ConsumerStatefulWidget {
   const ProductoFormDialog({super.key});
 
   @override
-  State<ProductoFormDialog> createState() => _ProductoFormDialogState();
+  ConsumerState<ProductoFormDialog> createState() => _ProductoFormDialogState();
 }
 
-class _ProductoFormDialogState extends State<ProductoFormDialog> {
+class _ProductoFormDialogState extends ConsumerState<ProductoFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _codigo = TextEditingController();
   final _descripcion = TextEditingController();
@@ -23,7 +24,9 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
   final _precio = TextEditingController();
   bool _esServicio = false;
   bool _usaContometro = false;
-  bool _esBazar = true; // Por defecto productos físicos son del bazar
+  bool _esBazar = true;
+  bool _loading = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -36,9 +39,30 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
     super.dispose();
   }
 
-  void _guardar() {
+  Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.pop(context, true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(productosControllerProvider).crear(
+            codigo: _codigo.text,
+            descripcion: _descripcion.text,
+            stockInicial: double.tryParse(_stockInicial.text) ?? 0,
+            stockMinimo: double.tryParse(_stockMinimo.text) ?? 0,
+            costo: double.tryParse(_costo.text) ?? 0,
+            precioVenta: double.tryParse(_precio.text) ?? 0,
+            esServicio: _esServicio,
+            usaContometro: _usaContometro,
+            esBazar: _esBazar,
+          );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -159,7 +183,7 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                         value: _esServicio,
                         onChanged: (v) => setState(() {
                           _esServicio = v;
-                          if (v) _esBazar = false; // un servicio no es del bazar
+                          if (v) _esBazar = false;
                         }),
                         title: const Text('Es un servicio',
                             style: TextStyle(color: AppColors.textPrimary)),
@@ -198,39 +222,42 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.info.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: AppColors.error, fontSize: 12),
+                    ),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: AppColors.info, size: 16),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Demo: el backend aún no tiene POST /productos. Esta interfaz quedará operativa al implementarlo.',
-                          style: TextStyle(fontSize: 11, color: AppColors.info),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                ],
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _loading ? null : () => Navigator.pop(context),
                       child: const Text('Cancelar'),
                     ),
                     const SizedBox(width: 8),
                     FilledButton.icon(
-                      onPressed: _guardar,
-                      icon: const Icon(Icons.save),
-                      label: const Text('Guardar producto'),
+                      onPressed: _loading ? null : _guardar,
+                      icon: _loading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(_loading ? 'Guardando...' : 'Guardar producto'),
                     ),
                   ],
                 ),
