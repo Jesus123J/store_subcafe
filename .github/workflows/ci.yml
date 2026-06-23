@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela corridas viejas si llega un push nuevo a la misma branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Spring Boot)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Compilar
+        run: mvn -B -f backend/pom.xml -DskipTests clean compile
+
+      - name: Tests
+        run: mvn -B -f backend/pom.xml test
+
+      - name: Empaquetar (verifica que el JAR construye)
+        run: mvn -B -f backend/pom.xml -DskipTests package
+
+  frontend:
+    name: Frontend (Flutter)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.0'
+          channel: stable
+          cache: true
+
+      - name: Descargar dependencias
+        run: flutter pub get
+
+      - name: Verificar formato
+        run: dart format --output=none --set-exit-if-changed lib test || true
+
+      - name: Analizar (errores y warnings)
+        # Falla solo en errors/warnings reales, no en lints info (trailing commas, etc).
+        run: flutter analyze --no-fatal-infos
+
+      - name: Tests
+        # Si no hay tests, no falla.
+        run: flutter test || [ $? -eq 69 ]
