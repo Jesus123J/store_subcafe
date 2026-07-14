@@ -1,29 +1,19 @@
-/// Trabajador del negocio (persistido como cliente con esTrabajador = true).
+/// Trabajador que viene passthrough desde FinantialTracker.employees.
+/// Solo transportamos DNI + nombre — la bodega NO tiene tabla local
+/// de trabajadores; cada vez que se necesitan se piden a FT en vivo.
 class TrabajadorDto {
-  TrabajadorDto({
-    required this.id,
+  const TrabajadorDto({
     required this.dni,
-    required this.nombres,
-    required this.apellidos,
-    required this.activo,
-    this.telefono,
+    required this.nombreCompleto,
   });
 
   factory TrabajadorDto.fromJson(Map<String, dynamic> j) => TrabajadorDto(
-        id: j['id'] as String,
         dni: j['dni'] as String,
-        nombres: j['nombres'] as String,
-        apellidos: j['apellidos'] as String,
-        telefono: j['telefono'] as String?,
-        activo: j['activo'] as bool? ?? true,
+        nombreCompleto: (j['nombre_completo'] as String?) ??
+            (j['nombreCompleto'] as String?) ??
+            '',
       );
 
-  final String id;
   final String dni;
-  final String nombres;
-  final String apellidos;
-  final String? telefono;
-  final bool activo;
-
-  String get nombreCompleto => '$nombres $apellidos';
+  final String nombreCompleto;
 }

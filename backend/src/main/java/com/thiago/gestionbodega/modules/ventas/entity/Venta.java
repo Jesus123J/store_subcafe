@@ -1,7 +1,6 @@
 package com.thiago.gestionbodega.modules.ventas.entity;
 
 import com.thiago.gestionbodega.modules.cajas.entity.Caja;
-import com.thiago.gestionbodega.modules.clientes.entity.Cliente;
 import com.thiago.gestionbodega.modules.usuarios.entity.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -54,13 +53,13 @@ public class Venta {
     private FormaPago formaPago;
 
     /**
-     * @deprecated Desde V3 - usar {@code pagos[i].trabajadorCredito}.
-     * Desde V7 apunta a {@link Cliente} (con es_trabajador = TRUE), no a Usuario.
+     * @deprecated Desde V3 usar {@code pagos[i].trabajadorCreditoDni}.
+     * Desde V9 esto es solo el DNI del trabajador (sin FK a nada local —
+     * el trabajador vive en FinantialTracker).
      */
     @Deprecated
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trabajador_credito_id")
-    private Cliente trabajadorCredito;
+    @Column(name = "trabajador_credito_dni", length = 8)
+    private String trabajadorCreditoDni;
 
     /**
      * Pagos parciales que conforman el total de la venta.

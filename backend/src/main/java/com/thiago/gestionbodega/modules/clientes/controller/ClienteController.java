@@ -52,7 +52,6 @@ public class ClienteController {
                 .nombres(dto.nombres())
                 .apellidos(dto.apellidos())
                 .telefono(dto.telefono())
-                .esTrabajador(dto.esTrabajador())
                 .activo(true)
                 .build();
         return ResponseEntity.status(201).body(
@@ -87,7 +86,6 @@ public class ClienteController {
                     existente.setNombres(dto.nombres());
                     existente.setApellidos(dto.apellidos());
                     existente.setTelefono(dto.telefono());
-                    existente.setEsTrabajador(dto.esTrabajador());
                     repo.save(existente);
                     actualizados++;
                 } else {
@@ -96,7 +94,6 @@ public class ClienteController {
                             .nombres(dto.nombres())
                             .apellidos(dto.apellidos())
                             .telefono(dto.telefono())
-                            .esTrabajador(dto.esTrabajador())
                             .activo(true)
                             .build());
                     creados++;

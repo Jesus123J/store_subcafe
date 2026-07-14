@@ -42,9 +42,12 @@ class ApiEndpoints {
   // Configuración
   static const String configuracion = '/configuracion';
 
-  // Clientes / Trabajadores
+  // Clientes (publico general de bodega — puntos/vales)
   static const String clientes = '/clientes';
   static const String clientesImport = '/clientes/import';
+
+  // Trabajadores (passthrough a FinantialTracker.employees — sin tabla local)
+  static const String trabajadores = '/trabajadores';
 
   // Vales
   static const String vales = '/vales';

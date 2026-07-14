@@ -15,7 +15,6 @@ public record ClienteDto(
         @NotBlank @Size(max = 150) String nombres,
         @NotBlank @Size(max = 150) String apellidos,
         String telefono,
-        boolean esTrabajador,
         boolean activo
 ) {
     public static ClienteDto from(Cliente c) {
@@ -25,7 +24,6 @@ public record ClienteDto(
                 .nombres(c.getNombres())
                 .apellidos(c.getApellidos())
                 .telefono(c.getTelefono())
-                .esTrabajador(c.isEsTrabajador())
                 .activo(c.isActivo())
                 .build();
     }

@@ -24,20 +24,22 @@ enum FormaPago {
 }
 
 /// Un pago parcial: forma de pago + monto + (opcional) código de operación.
-/// Si formaPago == CREDITO, [trabajadorId] y [trabajadorNombre] estan presentes.
+/// Si formaPago == CREDITO, [trabajadorDni] y [trabajadorNombre] estan presentes.
+/// El trabajador vive en FinantialTracker — aca solo cacheamos DNI+nombre
+/// para no volver a preguntar a FT en el mismo flujo.
 class PagoParcial {
   PagoParcial({
     required this.formaPago,
     required this.monto,
     this.codigoOperacion,
-    this.trabajadorId,
+    this.trabajadorDni,
     this.trabajadorNombre,
   });
 
   final FormaPago formaPago;
   final double monto;
   final String? codigoOperacion;
-  final String? trabajadorId;
+  final String? trabajadorDni;
   final String? trabajadorNombre;
 }
 
@@ -423,7 +425,7 @@ class _AgregarPagoSheetState extends ConsumerState<_AgregarPagoSheet> {
       codigoOperacion: _forma.requiereCodigo && _codigoCtrl.text.isNotEmpty
           ? _codigoCtrl.text.trim()
           : null,
-      trabajadorId: _forma == FormaPago.credito ? _trabajador?.id : null,
+      trabajadorDni: _forma == FormaPago.credito ? _trabajador?.dni : null,
       trabajadorNombre:
           _forma == FormaPago.credito ? _trabajador?.nombreCompleto : null,
     ));

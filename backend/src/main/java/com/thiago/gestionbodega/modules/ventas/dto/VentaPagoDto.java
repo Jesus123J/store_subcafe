@@ -10,8 +10,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * Representa un pago parcial de una venta. Una venta tiene una lista
- * de estos pagos cuya suma debe coincidir con el total.
+ * Pago parcial de una venta. Cuando forma_pago = CREDITO,
+ * trabajadorCreditoDni identifica al trabajador en FinantialTracker.
  */
 @Builder
 public record VentaPagoDto(
@@ -19,7 +19,7 @@ public record VentaPagoDto(
         @NotNull FormaPago formaPago,
         @NotNull @DecimalMin(value = "0.01", message = "El monto debe ser mayor a 0") BigDecimal monto,
         String codigoOperacion,
-        UUID trabajadorCreditoId,
+        String trabajadorCreditoDni,
         Integer orden
 ) {
 
@@ -29,7 +29,7 @@ public record VentaPagoDto(
                 .formaPago(p.getFormaPago())
                 .monto(p.getMonto())
                 .codigoOperacion(p.getCodigoOperacion())
-                .trabajadorCreditoId(p.getTrabajadorCredito() != null ? p.getTrabajadorCredito().getId() : null)
+                .trabajadorCreditoDni(p.getTrabajadorCreditoDni())
                 .orden(p.getOrden())
                 .build();
     }

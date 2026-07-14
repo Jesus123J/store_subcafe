@@ -17,32 +17,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Orquesta el envio de la deuda mensual (o individual) de la bodega hacia el
- * FinantialTracker.
+ * Envia la deuda mensual (o individual) de la bodega al FinantialTracker.
  *
- * Flujo tipico del cierre mensual:
- *   1. Admin cierra el mes en la bodega -> CierreCreditosService.cerrarMes()
- *      genera un registro en cierres_mensuales_creditos y marca todos los
- *      creditos_trabajadores del mes como cerrado=TRUE.
- *   2. Admin aprieta "Enviar a planilla" -> enviarCierre(cierreId).
- *      Este service:
- *        a) Verifica que no se haya enviado ya (envios_financialtracker).
- *        b) Trae los creditos agrupados por trabajador (con DNI del cliente).
- *        c) Valida que todos los DNIs existan en employees de FT.
- *        d) Crea un lote_carga_abono en FT.
- *        e) Inserta 1 abono + 1 abonodetail por trabajador.
- *        f) Registra el envio local para tracking bidireccional.
- *
- * Reversion: revertirEnvio() borra los abonos+detail del lote en FT, marca el
- * lote como REVERTIDO en ambas BDs. Idempotente.
+ * Los trabajadores viven en FT (tabla employees) — la bodega solo guarda
+ * el DNI en {@code creditos_trabajadores.trabajador_dni}. Al enviar, se
+ * agrupa por DNI, se valida que existan como employees en FT, y se
+ * insertan los abonos.
  */
 @Slf4j
 @Service
@@ -62,14 +48,14 @@ public class FinancialTrackerService {
         Usuario admin = usuarioRepo.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado: " + username));
 
-        // 1) Verificar que el cierre existe
+        // 1) Verificar cierre
         Map<String, Object> cierre = jdbc.queryForMap("""
                 SELECT id, anio, mes FROM cierres_mensuales_creditos WHERE id = :id
                 """, new MapSqlParameterSource("id", cierreId.toString()));
         int anio = (int) cierre.get("anio");
         int mes  = (int) cierre.get("mes");
 
-        // 2) Bloquear reenvio si ya hay un envio ACTIVO para este cierre
+        // 2) Bloquear reenvio
         Integer yaEnviado = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM envios_financialtracker
                  WHERE cierre_id = :cid AND estado = 'ACTIVO'
@@ -80,17 +66,15 @@ public class FinancialTrackerService {
                     + "Reviertelo antes de reenviar.");
         }
 
-        // 3) Traer los creditos agrupados por trabajador (dni + monto)
+        // 3) Agrupar creditos por DNI (sin JOIN — el DNI vive en la tabla)
         List<Map<String, Object>> filas = jdbc.queryForList("""
-                SELECT c.trabajador_id, cl.dni,
-                       CONCAT(cl.nombres, ' ', cl.apellidos) AS nombre_completo,
+                SELECT c.trabajador_dni AS dni,
                        COALESCE(SUM(c.monto), 0) AS monto_total
                   FROM creditos_trabajadores c
-                  JOIN clientes cl ON cl.id = c.trabajador_id
                  WHERE c.periodo_anio = :a
                    AND c.periodo_mes  = :m
                    AND c.cerrado      = TRUE
-                 GROUP BY c.trabajador_id, cl.dni, cl.nombres, cl.apellidos
+                 GROUP BY c.trabajador_dni
                 HAVING SUM(c.monto) > 0
                 """,
                 new MapSqlParameterSource().addValue("a", anio).addValue("m", mes));
@@ -99,34 +83,34 @@ public class FinancialTrackerService {
             throw new BusinessException("El cierre no tiene creditos para enviar");
         }
 
-        // 4) Validar todos los DNIs en FT ANTES de crear el lote
+        // 4) Validar todos los DNI en FT antes de crear el lote
         List<String> noEncontrados = new ArrayList<>();
         for (Map<String, Object> f : filas) {
             String dni = (String) f.get("dni");
             if (ftRepo.findEmployeeIdByDni(dni).isEmpty()) {
-                noEncontrados.add(dni + " (" + f.get("nombre_completo") + ")");
+                noEncontrados.add(dni);
             }
         }
         if (!noEncontrados.isEmpty()) {
             throw new BusinessException(
-                    "Los siguientes trabajadores no existen en la planilla del hospital. "
+                    "Los siguientes DNI no existen en la planilla del hospital. "
                     + "Registralos primero en FinantialTracker:\n - "
                     + String.join("\n - ", noEncontrados));
         }
 
-        // 5) Verificar que el service_concept exista en FT
+        // 5) Verificar service_concept
         if (!ftRepo.existeServiceConcept(props.getServiceConceptId())) {
             throw new BusinessException(
                     "El service_concept_id=" + props.getServiceConceptId()
                     + " no existe en FinantialTracker. Crealo primero o ajusta la config.");
         }
 
-        // 6) Crear el lote en FT
+        // 6) Crear lote
         String nombreLote = "Bodega Sub Cafe - " + mesToLabel(mes) + " " + anio;
         int loteIdFt = ftRepo.crearLote(nombreLote, filas.size());
         log.info("Lote {} creado en FT para cierre {}/{}", loteIdFt, mes, anio);
 
-        // 7) Insertar abonos + detail por trabajador
+        // 7) Insertar abonos + detail
         BigDecimal montoTotal = BigDecimal.ZERO;
         LocalDate paymentDate = primerPaymentDateSiguienteMes(anio, mes);
         for (Map<String, Object> f : filas) {
@@ -142,7 +126,7 @@ public class FinancialTrackerService {
             montoTotal = montoTotal.add(monto);
         }
 
-        // 8) Registrar el envio en la BD de la bodega
+        // 8) Registrar envio
         UUID envioId = UUID.randomUUID();
         OffsetDateTime ahora = OffsetDateTime.now();
         jdbc.update("""
@@ -183,12 +167,10 @@ public class FinancialTrackerService {
         Usuario admin = usuarioRepo.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado: " + username));
 
-        // 1) Verificar que el credito existe y NO ha sido enviado ya
+        // 1) Verificar credito
         Map<String, Object> row = jdbc.queryForMap("""
-                SELECT c.id, c.trabajador_id, c.monto, cl.dni,
-                       CONCAT(cl.nombres, ' ', cl.apellidos) AS nombre_completo
+                SELECT c.id, c.trabajador_dni AS dni, c.monto
                   FROM creditos_trabajadores c
-                  JOIN clientes cl ON cl.id = c.trabajador_id
                  WHERE c.id = :id
                 """, new MapSqlParameterSource("id", creditoId.toString()));
 
@@ -206,10 +188,9 @@ public class FinancialTrackerService {
         // 2) Validar DNI en FT
         int employeeId = ftRepo.findEmployeeIdByDni(dni)
                 .orElseThrow(() -> new BusinessException(
-                        "El trabajador " + dni + " (" + row.get("nombre_completo")
-                        + ") no existe en la planilla del hospital"));
+                        "El trabajador con DNI " + dni + " no existe en la planilla del hospital"));
 
-        // 3) Crear lote de 1 fila y abono
+        // 3) Crear lote de 1 fila
         LocalDate paymentDate = primerPaymentDateSiguienteMes(
                 LocalDate.now().getYear(), LocalDate.now().getMonthValue());
         String nombreLote = "Bodega Sub Cafe - " + dni + " (individual)";
@@ -263,15 +244,12 @@ public class FinancialTrackerService {
 
         int loteIdFt = (int) envio.get("lote_id_ft");
 
-        // 1. Borrar abonos + details del lote en FT
         int borrados = ftRepo.borrarAbonosDeLote(loteIdFt);
         log.info("Revertiendo envio {}: {} abonos borrados del lote FT {}",
                 envioId, borrados, loteIdFt);
 
-        // 2. Marcar lote REVERTIDO en FT
         ftRepo.marcarLoteRevertido(loteIdFt, motivo != null ? motivo : "Revertido desde bodega");
 
-        // 3. Marcar envio REVERTIDO en bodega
         jdbc.update("""
                 UPDATE envios_financialtracker
                    SET estado = 'REVERTIDO',
@@ -287,7 +265,7 @@ public class FinancialTrackerService {
                         .addValue("userId", admin.getId().toString()));
     }
 
-    // ─── LISTAR HISTORIAL ──────────────────────────────────────────────
+    // ─── HISTORIAL ─────────────────────────────────────────────────────
 
     public List<EnvioResumenDto> historial() {
         return jdbc.query("""
@@ -313,67 +291,8 @@ public class FinancialTrackerService {
                         .build());
     }
 
-    // ─── Health ────────────────────────────────────────────────────────
-
     public boolean health() {
         return ftRepo.ping();
-    }
-
-    // ─── Sync empleados FT -> clientes bodega ──────────────────────────
-
-    /**
-     * Trae todos los empleados de FT (employees.national_id, fullName) y los
-     * inserta en clientes (bodega) como es_trabajador=TRUE si el DNI aun no
-     * existe. Los ya existentes se saltan (no se sobreescriben para preservar
-     * ediciones locales). Split de fullName por primer espacio: primera
-     * palabra = nombres, resto = apellidos.
-     */
-    @Transactional
-    public Map<String, Integer> sincronizarEmpleadosDesdeFt() {
-        List<Map<String, Object>> empleados = ftRepo.listarEmpleados();
-        int creados = 0, existentes = 0, invalidos = 0;
-
-        for (Map<String, Object> emp : empleados) {
-            String dni = (String) emp.get("dni");
-            String fullName = (String) emp.get("nombre_completo");
-            if (dni == null || dni.isBlank() || fullName == null || fullName.isBlank()) {
-                invalidos++;
-                continue;
-            }
-
-            Integer yaExiste = jdbc.queryForObject(
-                    "SELECT COUNT(*) FROM clientes WHERE dni = :dni",
-                    new MapSqlParameterSource("dni", dni), Integer.class);
-            if (yaExiste != null && yaExiste > 0) {
-                existentes++;
-                continue;
-            }
-
-            String[] partes = fullName.trim().split("\\s+", 2);
-            String nombres = partes[0];
-            String apellidos = partes.length > 1 ? partes[1] : "";
-
-            jdbc.update("""
-                    INSERT INTO clientes
-                        (id, dni, nombres, apellidos, es_trabajador, activo, creado_en)
-                    VALUES
-                        (UUID(), :dni, :nombres, :apellidos, TRUE, TRUE, NOW(6))
-                    """,
-                    new MapSqlParameterSource()
-                            .addValue("dni", dni)
-                            .addValue("nombres", nombres)
-                            .addValue("apellidos", apellidos));
-            creados++;
-        }
-
-        log.info("Sync empleados FT->bodega: {} creados, {} ya existian, {} invalidos",
-                creados, existentes, invalidos);
-        return Map.of(
-                "totalEnFt", empleados.size(),
-                "creados", creados,
-                "yaExistian", existentes,
-                "invalidos", invalidos
-        );
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────

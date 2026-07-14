@@ -5,8 +5,6 @@ import com.thiago.gestionbodega.common.exception.NotFoundException;
 import com.thiago.gestionbodega.modules.cajas.entity.Caja;
 import com.thiago.gestionbodega.modules.cajas.entity.EstadoCaja;
 import com.thiago.gestionbodega.modules.cajas.repository.CajaRepository;
-import com.thiago.gestionbodega.modules.clientes.entity.Cliente;
-import com.thiago.gestionbodega.modules.clientes.repository.ClienteRepository;
 import com.thiago.gestionbodega.modules.creditos.entity.CreditoTrabajador;
 import com.thiago.gestionbodega.modules.creditos.repository.CreditoTrabajadorRepository;
 import com.thiago.gestionbodega.modules.productos.entity.Producto;
@@ -33,11 +31,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Registra ventas conectadas a la caja abierta del cajero:
- *   1) Crea Venta + VentaDetalle (descuenta stock de productos no-servicio)
- *   2) Crea VentaPago[] (pago mixto: una venta puede tener varios pagos)
- *   3) Si un pago es CREDITO, registra un CreditoTrabajador asociado
- *   4) Valida que suma(items.subtotal) == suma(pagos.monto)
+ * Registra ventas conectadas a la caja abierta del cajero.
+ *
+ * Cuando forma_pago = CREDITO, guarda solo el DNI del trabajador (no valida
+ * contra FT — el frontend elige de la lista passthrough, si el DNI llega
+ * aca es porque se selecciono de FT). Sin FK a nada local.
  *
  * Todo en una sola transaccion: si algo falla, rollback completo.
  */
@@ -52,7 +50,6 @@ public class VentaService {
     private final CajaRepository cajaRepo;
     private final ProductoRepository productoRepo;
     private final UsuarioRepository usuarioRepo;
-    private final ClienteRepository clienteRepo;
     private final CreditoTrabajadorRepository creditoRepo;
 
     public List<VentaDto> listar() {
@@ -136,7 +133,7 @@ public class VentaService {
         // 5) Procesar pagos (uno o varios — pago mixto)
         int orden = 0;
         FormaPago formaPrimaria = null;
-        Cliente trabajadorPrimario = null;
+        String dniPrimario = null;
         for (VentaPagoRequest pp : req.pagos()) {
             VentaPago pago = VentaPago.builder()
                     .formaPago(pp.formaPago())
@@ -145,20 +142,13 @@ public class VentaService {
                     .orden(orden)
                     .build();
 
-            // Si es credito, asociar el cliente-trabajador y crear el registro
             if (pp.formaPago() == FormaPago.CREDITO) {
-                Cliente trab = clienteRepo.findById(pp.trabajadorCreditoId())
-                        .orElseThrow(() -> new NotFoundException(
-                                "Trabajador no encontrado: " + pp.trabajadorCreditoId()));
-                if (!trab.isEsTrabajador() || !trab.isActivo()) {
-                    throw new BusinessException(
-                            "El cliente seleccionado no es un trabajador activo");
-                }
-                pago.setTrabajadorCredito(trab);
-                if (trabajadorPrimario == null) trabajadorPrimario = trab;
+                String dni = pp.trabajadorCreditoDni();
+                pago.setTrabajadorCreditoDni(dni);
+                if (dniPrimario == null) dniPrimario = dni;
 
                 creditoRepo.save(CreditoTrabajador.builder()
-                        .trabajador(trab)
+                        .trabajadorDni(dni)
                         .venta(venta)
                         .monto(pp.monto())
                         .fecha(OffsetDateTime.now())
@@ -171,10 +161,10 @@ public class VentaService {
             orden++;
         }
 
-        // 6) Actualizar total y compatibilidad legacy (forma_pago)
+        // 6) Actualizar total y compatibilidad legacy (forma_pago + dni)
         venta.setTotal(totalItems);
         venta.setFormaPago(formaPrimaria);
-        venta.setTrabajadorCredito(trabajadorPrimario);
+        venta.setTrabajadorCreditoDni(dniPrimario);
         venta = ventaRepo.save(venta);
 
         log.info("Venta {} registrada: {} items, total {} en caja {} ({} pagos)",
@@ -186,7 +176,7 @@ public class VentaService {
         return VentaDto.conDetalle(venta, itemsDto, pagosDto);
     }
 
-    /** Suma items == suma pagos, y credito requiere trabajadorId. */
+    /** Suma items == suma pagos, y credito requiere trabajadorDni. */
     private void validarPagos(CrearVentaRequest req) {
         BigDecimal totalItems = req.items().stream()
                 .map(it -> it.cantidad().multiply(it.precioUnitario()))
@@ -205,9 +195,12 @@ public class VentaService {
         }
 
         for (VentaPagoRequest pp : req.pagos()) {
-            if (pp.formaPago() == FormaPago.CREDITO && pp.trabajadorCreditoId() == null) {
-                throw new BusinessException(
-                        "Pago a credito requiere el id del trabajador");
+            if (pp.formaPago() == FormaPago.CREDITO) {
+                String dni = pp.trabajadorCreditoDni();
+                if (dni == null || dni.isBlank()) {
+                    throw new BusinessException(
+                            "Pago a credito requiere el DNI del trabajador");
+                }
             }
         }
     }

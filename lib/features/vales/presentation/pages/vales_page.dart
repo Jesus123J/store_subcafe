@@ -445,23 +445,24 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
                 const SizedBox(height: 12),
                 trabajadoresAsync.when(
                   loading: () => const LinearProgressIndicator(),
-                  error: (e, _) =>
-                      Text('Error: $e', style: const TextStyle(color: AppColors.error)),
+                  error: (e, _) => Text('Error: $e',
+                      style: const TextStyle(color: AppColors.error)),
                   data: (lista) {
-                    final activos =
-                        lista.where((t) => t.activo).toList();
+                    // Trabajadores vienen passthrough desde FT.
+                    // TODO: el backend de vales aun espera cliente_id UUID.
+                    // Refactor pendiente para aceptar DNI de trabajador.
                     return DropdownButtonFormField<String>(
                       value: _clienteId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Trabajador asignado',
+                        labelText: 'Trabajador asignado (DNI)',
                         prefixIcon: Icon(Icons.person),
                         isDense: true,
                       ),
-                      items: activos
+                      items: lista
                           .map(
                             (t) => DropdownMenuItem(
-                              value: t.id,
+                              value: t.dni,
                               child: Text(
                                 '${t.dni} · ${t.nombreCompleto}',
                                 overflow: TextOverflow.ellipsis,
