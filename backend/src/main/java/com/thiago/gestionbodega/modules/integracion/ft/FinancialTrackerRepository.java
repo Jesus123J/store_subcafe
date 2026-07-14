@@ -1,6 +1,5 @@
 package com.thiago.gestionbodega.modules.integracion.ft;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -22,16 +21,22 @@ import java.util.Optional;
  * Refleja exactamente los INSERT / SELECT que hace el AbonoDao original de
  * FinantialTracker, para asegurar compatibilidad total con su UI existente.
  *
- * IMPORTANTE: los campos de fecha en FT son VARCHAR (formato yyyy-MM-dd o
- * yyyy-MM-dd HH:mm:ss), NO tipos SQL nativos. Aqui los formateamos igual.
+ * IMPORTANTE: constructor manual (sin Lombok) porque {@code @Qualifier} sobre
+ * un campo con {@code @RequiredArgsConstructor} NO se propaga al constructor
+ * generado — Spring termina inyectando el JdbcTemplate primario (bodega) en
+ * vez del secundario (FT) y explota con "Table gestion_bodega.employees
+ * doesn't exist".
  */
 @Repository
-@RequiredArgsConstructor
 @ConditionalOnBean(name = "ftJdbc")
 public class FinancialTrackerRepository {
 
-    @Qualifier("ftJdbc")
     private final NamedParameterJdbcTemplate ftJdbc;
+
+    public FinancialTrackerRepository(
+            @Qualifier("ftJdbc") NamedParameterJdbcTemplate ftJdbc) {
+        this.ftJdbc = ftJdbc;
+    }
 
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter FECHA_HORA =
