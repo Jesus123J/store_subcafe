@@ -60,6 +60,22 @@ app:
   flyway:
     repair-on-startup: ${FLYWAY_REPAIR:true}
 
+# ─── Integracion con FinantialTracker (sistema de planilla del HSJ) ───
+# Segundo DataSource que apunta a la BD de FT para pushear la deuda mensual
+# al cerrar el mes. Si enabled=false, los endpoints devuelven 503 sin tocar
+# la BD (util para dev sin FT corriendo).
+integracion:
+  financialtracker:
+    enabled: ${FT_ENABLED:true}
+    url: ${FT_DB_URL:jdbc:mariadb://localhost:3306/financialtracker1?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima}
+    user: ${FT_DB_USER:root}
+    password: ${FT_DB_PASS:}
+    # ID del service_concept en FT que representa "Consumo en bodega".
+    # Karina debe verificar/crear este concepto en la UI de FT y ajustar aqui.
+    service-concept-id: ${FT_SERVICE_CONCEPT_ID:1}
+    # Dia del mes siguiente en que se descuenta el abono.
+    dia-descuento: ${FT_DIA_DESCUENTO:5}
+
 # ─── Swagger ───
 springdoc:
   api-docs:

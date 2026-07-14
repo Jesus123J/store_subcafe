@@ -50,7 +50,7 @@ class ApiClient {
 
   Future<void> deleteData(String path) async {
     try {
-      await _dio.delete(path);
+      await _dio.delete<void>(path);
     } on DioException catch (e) {
       throw _mapError(e);
     }
