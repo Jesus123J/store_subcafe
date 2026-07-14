@@ -9,5 +9,7 @@ import java.util.UUID;
 
 @Repository
 public interface CreditoTrabajadorRepository extends JpaRepository<CreditoTrabajador, UUID> {
-    List<CreditoTrabajador> findByTrabajadorIdAndCerradoFalse(UUID trabajadorId);
+
+    /** Creditos pendientes (no cerrados) de un trabajador identificado por DNI. */
+    List<CreditoTrabajador> findByTrabajadorDniAndCerradoFalse(String trabajadorDni);
 }
