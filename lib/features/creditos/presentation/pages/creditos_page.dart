@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
+import '../../../trabajadores/presentation/providers/trabajadores_provider.dart';
 import '../../data/models/envio_ft_model.dart';
 import '../providers/financialtracker_provider.dart';
 
@@ -301,27 +302,32 @@ class _SeccionMes extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // Mapa DNI -> nombre viene passthrough desde FT
                   ...lista.map((r) {
+                    final trabajadores =
+                        ref.watch(trabajadoresPorDniProvider);
+                    final dni = r['dni'] as String? ?? '';
+                    final nombre = trabajadores[dni] ?? dni;
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         backgroundColor: AppColors.error,
                         child: Text(
-                          ((r['nombre_completo'] as String?) ?? '?')
-                              .substring(0, 1)
-                              .toUpperCase(),
+                          nombre.isNotEmpty
+                              ? nombre.substring(0, 1).toUpperCase()
+                              : '?',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
                       title: Text(
-                        r['nombre_completo'] as String? ?? '—',
+                        nombre,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
-                        '@${r['username']} · ${r['cantidad_consumos']} consumo(s)',
+                        'DNI $dni · ${r['cantidad_consumos']} consumo(s)',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
@@ -425,26 +431,30 @@ class _SeccionDeuda extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   ...lista.map((r) {
+                    final trabajadores =
+                        ref.watch(trabajadoresPorDniProvider);
+                    final dni = r['dni'] as String? ?? '';
+                    final nombre = trabajadores[dni] ?? dni;
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         backgroundColor: AppColors.warning,
                         child: Text(
-                          ((r['nombre_completo'] as String?) ?? '?')
-                              .substring(0, 1)
-                              .toUpperCase(),
+                          nombre.isNotEmpty
+                              ? nombre.substring(0, 1).toUpperCase()
+                              : '?',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
                       title: Text(
-                        r['nombre_completo'] as String? ?? '—',
+                        nombre,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
-                        '@${r['username']}',
+                        'DNI $dni',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
