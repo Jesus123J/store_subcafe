@@ -86,6 +86,15 @@ class _UsuariosTable extends StatelessWidget {
       child: DataTable(
         columnSpacing: 24,
         headingRowColor: WidgetStateProperty.all(AppColors.background),
+        headingTextStyle: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+        dataTextStyle: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 13,
+        ),
         columns: const [
           DataColumn(label: Text('Usuario')),
           DataColumn(label: Text('Nombre completo')),
@@ -96,8 +105,16 @@ class _UsuariosTable extends StatelessWidget {
         rows: usuarios.map((u) {
           return DataRow(
             cells: [
-              DataCell(Text(u.username, style: const TextStyle(fontWeight: FontWeight.w500))),
-              DataCell(Text(u.nombreCompleto)),
+              DataCell(Text(
+                u.username,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary),
+              )),
+              DataCell(Text(
+                u.nombreCompleto,
+                style: const TextStyle(color: AppColors.textPrimary),
+              )),
               DataCell(_RolChip(rol: u.rol)),
               DataCell(_EstadoChip(activo: u.activo)),
               DataCell(_AccionesRow(usuario: u, refWidget: ref)),

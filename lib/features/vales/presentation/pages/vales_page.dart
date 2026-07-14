@@ -175,6 +175,15 @@ class _Body extends StatelessWidget {
                 columnSpacing: 16,
                 headingRowColor:
                     WidgetStateProperty.all(AppColors.background),
+                headingTextStyle: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+                dataTextStyle: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                ),
                 columns: const [
                   DataColumn(label: Text('Código')),
                   DataColumn(label: Text('Tipo')),

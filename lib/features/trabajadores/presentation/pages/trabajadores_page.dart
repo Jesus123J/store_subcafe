@@ -144,6 +144,15 @@ class _BodyState extends State<_Body> {
                   columnSpacing: 24,
                   headingRowColor:
                       WidgetStateProperty.all(AppColors.background),
+                  headingTextStyle: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  dataTextStyle: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                  ),
                   columns: const [
                     DataColumn(label: Text('DNI')),
                     DataColumn(label: Text('Nombre completo')),
