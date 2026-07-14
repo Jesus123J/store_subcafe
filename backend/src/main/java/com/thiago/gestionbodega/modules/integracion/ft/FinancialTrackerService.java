@@ -319,6 +319,63 @@ public class FinancialTrackerService {
         return ftRepo.ping();
     }
 
+    // ─── Sync empleados FT -> clientes bodega ──────────────────────────
+
+    /**
+     * Trae todos los empleados de FT (employees.national_id, fullName) y los
+     * inserta en clientes (bodega) como es_trabajador=TRUE si el DNI aun no
+     * existe. Los ya existentes se saltan (no se sobreescriben para preservar
+     * ediciones locales). Split de fullName por primer espacio: primera
+     * palabra = nombres, resto = apellidos.
+     */
+    @Transactional
+    public Map<String, Integer> sincronizarEmpleadosDesdeFt() {
+        List<Map<String, Object>> empleados = ftRepo.listarEmpleados();
+        int creados = 0, existentes = 0, invalidos = 0;
+
+        for (Map<String, Object> emp : empleados) {
+            String dni = (String) emp.get("dni");
+            String fullName = (String) emp.get("nombre_completo");
+            if (dni == null || dni.isBlank() || fullName == null || fullName.isBlank()) {
+                invalidos++;
+                continue;
+            }
+
+            Integer yaExiste = jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM clientes WHERE dni = :dni",
+                    new MapSqlParameterSource("dni", dni), Integer.class);
+            if (yaExiste != null && yaExiste > 0) {
+                existentes++;
+                continue;
+            }
+
+            String[] partes = fullName.trim().split("\\s+", 2);
+            String nombres = partes[0];
+            String apellidos = partes.length > 1 ? partes[1] : "";
+
+            jdbc.update("""
+                    INSERT INTO clientes
+                        (id, dni, nombres, apellidos, es_trabajador, activo, creado_en)
+                    VALUES
+                        (UUID(), :dni, :nombres, :apellidos, TRUE, TRUE, NOW(6))
+                    """,
+                    new MapSqlParameterSource()
+                            .addValue("dni", dni)
+                            .addValue("nombres", nombres)
+                            .addValue("apellidos", apellidos));
+            creados++;
+        }
+
+        log.info("Sync empleados FT->bodega: {} creados, {} ya existian, {} invalidos",
+                creados, existentes, invalidos);
+        return Map.of(
+                "totalEnFt", empleados.size(),
+                "creados", creados,
+                "yaExistian", existentes,
+                "invalidos", invalidos
+        );
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────
 
     private LocalDate primerPaymentDateSiguienteMes(int anio, int mes) {

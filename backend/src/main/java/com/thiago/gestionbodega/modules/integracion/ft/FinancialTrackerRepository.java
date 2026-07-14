@@ -51,6 +51,21 @@ public class FinancialTrackerRepository {
         return ids.isEmpty() ? Optional.empty() : Optional.of(ids.get(0));
     }
 
+    /**
+     * Lista todos los empleados del FT para importar a la bodega.
+     * Devuelve solo campos que la bodega necesita (dni, nombre, estado).
+     */
+    public List<Map<String, Object>> listarEmpleados() {
+        return ftJdbc.queryForList("""
+                SELECT national_id AS dni,
+                       fullName AS nombre_completo,
+                       employment_status AS estado_empleo
+                  FROM employees
+                 WHERE national_id IS NOT NULL AND national_id != ''
+                 ORDER BY fullName
+                """, new MapSqlParameterSource());
+    }
+
     // ─── Lote de carga ─────────────────────────────────────────────────
 
     public int crearLote(String nombreArchivo, int cantidadAbonos) {

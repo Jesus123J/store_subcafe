@@ -67,6 +67,17 @@ public class FinancialTrackerController {
         return ApiResponse.ok(requireEnabled().historial());
     }
 
+    /**
+     * Sincroniza empleados de FT hacia clientes (bodega) como
+     * trabajadores. Solo crea los DNI que no existen aun.
+     */
+    @PostMapping("/sync-empleados")
+    public ApiResponse<Map<String, Integer>> sincronizarEmpleados() {
+        return ApiResponse.ok(
+                requireEnabled().sincronizarEmpleadosDesdeFt(),
+                "Empleados sincronizados desde FinantialTracker");
+    }
+
     @GetMapping("/health")
     public ApiResponse<Map<String, Object>> health() {
         FinancialTrackerService svc = serviceProvider.getIfAvailable();

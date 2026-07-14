@@ -32,6 +32,11 @@ public class FinancialTrackerConfig {
         return new FinancialTrackerProperties();
     }
 
+    /**
+     * DataSource secundario. Se inyecta solo con @Qualifier("financialTrackerDataSource")
+     * — para que Flyway/JPA usen el principal (bodega), este debe estar marcado
+     * con @Primary en {@link com.thiago.gestionbodega.config.PrimaryDataSourceConfig}.
+     */
     @Bean(name = "financialTrackerDataSource", destroyMethod = "close")
     public DataSource financialTrackerDataSource(FinancialTrackerProperties props) {
         HikariConfig cfg = new HikariConfig();
@@ -44,8 +49,12 @@ public class FinancialTrackerConfig {
         cfg.setConnectionTimeout(10_000);
         cfg.setIdleTimeout(60_000);
         cfg.setPoolName("FinancialTrackerPool");
-        // Auto-commit off: los envios se hacen dentro de una transaccion manual
         cfg.setAutoCommit(true);
+        // Lazy: si FT no esta arriba al momento del arranque, el pool NO tira
+        // excepcion. Solo falla cuando alguien intenta usarlo (endpoint
+        // /integracion/ft/*). Asi el backend sigue funcionando para POS, caja,
+        // reportes, etc. aunque el hospital tenga la BD caida.
+        cfg.setInitializationFailTimeout(-1);
         return new HikariDataSource(cfg);
     }
 
