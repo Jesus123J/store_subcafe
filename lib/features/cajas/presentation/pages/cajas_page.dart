@@ -601,6 +601,8 @@ class _AbrirCajaDialogState extends ConsumerState<_AbrirCajaDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 460),
         padding: const EdgeInsets.all(24),
@@ -773,6 +775,8 @@ class _CerrarCajaDialogState extends ConsumerState<_CerrarCajaDialog> {
     final diferencia = ingresado - esperado;
 
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 460),
         padding: const EdgeInsets.all(24),
@@ -974,6 +978,8 @@ class _AvanceDialogState extends ConsumerState<_AvanceDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 420),
         padding: const EdgeInsets.all(24),

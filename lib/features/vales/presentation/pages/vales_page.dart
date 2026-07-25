@@ -398,6 +398,8 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
   Widget build(BuildContext context) {
     final trabajadoresAsync = ref.watch(trabajadoresProvider);
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
         padding: const EdgeInsets.all(24),

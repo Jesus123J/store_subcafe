@@ -90,6 +90,8 @@ class _NuevaCompraDialogState extends ConsumerState<NuevaCompraDialog> {
     final proveedoresAsync = ref.watch(proveedoresListProvider);
 
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 640, maxHeight: 700),
         padding: const EdgeInsets.all(24),
@@ -434,6 +436,8 @@ class _AgregarItemDialogState extends State<_AgregarItemDialog> {
   Widget build(BuildContext context) {
     final activos = widget.productos.where((p) => p.activo).toList();
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 460),
         padding: const EdgeInsets.all(20),
