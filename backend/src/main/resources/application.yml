@@ -5,7 +5,10 @@ spring:
   # ─── MySQL 8 / MariaDB ───
   # Variables sensibles via env vars (con defaults para desarrollo local)
   datasource:
-    url: ${DB_URL:jdbc:mariadb://localhost:3306/gestion_bodega?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima}
+    # allowPublicKeyRetrieval + useSsl=false permiten al driver MariaDB
+    # autenticarse contra MySQL 8 con caching_sha2_password sin canal TLS
+    # (obligatorio en desarrollo local).
+    url: ${DB_URL:jdbc:mariadb://localhost:3306/gestion_bodega?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima&allowPublicKeyRetrieval=true&useSsl=false}
     username: ${DB_USER:bodega_user}
     password: ${DB_PASS:bodega_pass}
     driver-class-name: org.mariadb.jdbc.Driver
@@ -67,7 +70,7 @@ app:
 integracion:
   financialtracker:
     enabled: ${FT_ENABLED:true}
-    url: ${FT_DB_URL:jdbc:mariadb://localhost:3306/financialtracker1?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima}
+    url: ${FT_DB_URL:jdbc:mariadb://localhost:3306/financialtracker1?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima&allowPublicKeyRetrieval=true&useSsl=false}
     user: ${FT_DB_USER:root}
     password: ${FT_DB_PASS:}
     # ID del service_concept en FT que representa "Consumo en bodega".
