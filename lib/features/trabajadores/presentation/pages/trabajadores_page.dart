@@ -93,7 +93,8 @@ class _BodyState extends State<_Body> {
         ? widget.trabajadores
         : widget.trabajadores.where((t) {
             return t.dni.contains(q) ||
-                t.nombreCompleto.toLowerCase().contains(q);
+                t.nombreCompleto.toLowerCase().contains(q) ||
+                (t.estadoEmpleo?.toLowerCase().contains(q) ?? false);
           }).toList();
 
     return Padding(
@@ -101,7 +102,6 @@ class _BodyState extends State<_Body> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Banner de origen
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -132,7 +132,7 @@ class _BodyState extends State<_Body> {
             child: AppDataTable(
               searchController: _busquedaCtrl,
               onSearchChanged: () => setState(() {}),
-              searchHint: 'Buscar por DNI o nombre...',
+              searchHint: 'Buscar por DNI, nombre o estado...',
               totalItems: widget.trabajadores.length,
               filteredItems: filtrados.length,
               emptyMessage:
@@ -140,6 +140,7 @@ class _BodyState extends State<_Body> {
               columns: const [
                 AppTableColumn(label: 'DNI', width: 120),
                 AppTableColumn(label: 'Nombre completo', flex: 3),
+                AppTableColumn(label: 'Estado', width: 140),
               ],
               rows: filtrados
                   .map((t) => AppTableRow(
@@ -163,12 +164,60 @@ class _BodyState extends State<_Body> {
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
+                          _EstadoBadge(estado: t.estadoEmpleo),
                         ],
                       ))
                   .toList(),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Badge visual para el estado de empleo (Nombrado / CAS / Cese / etc).
+/// Colorea segun el texto — si es null pinta un placeholder neutro.
+class _EstadoBadge extends StatelessWidget {
+  const _EstadoBadge({required this.estado});
+  final String? estado;
+
+  @override
+  Widget build(BuildContext context) {
+    if (estado == null || estado!.trim().isEmpty) {
+      return const Text(
+        '—',
+        style: TextStyle(color: AppColors.textHint, fontSize: 12),
+      );
+    }
+    final e = estado!.toLowerCase();
+    final Color color;
+    if (e.contains('nombr')) {
+      color = AppColors.secondary;
+    } else if (e.contains('cas')) {
+      color = AppColors.info;
+    } else if (e.contains('cese') ||
+        e.contains('baja') ||
+        e.contains('retir')) {
+      color = AppColors.error;
+    } else {
+      color = AppColors.textSecondary;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        estado!,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
