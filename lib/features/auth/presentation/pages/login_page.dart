@@ -7,7 +7,6 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/providers/current_user_provider.dart';
-import '../../domain/entities/usuario.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../providers/auth_provider.dart';
 
@@ -20,8 +19,8 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _userCtrl = TextEditingController(text: 'admin');       // pre-llenado para demo
-  final _passCtrl = TextEditingController(text: 'admin123');
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _loading = false;
   String? _error;
 
@@ -55,18 +54,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         context.go(AppRoutes.ventas);
       },
     );
-  }
-
-  void _entrarDemo() {
-    const usuarioDemo = Usuario(
-      id: 'demo-user-id',
-      username: 'demo',
-      nombreCompleto: 'Usuario Demo (Administrador)',
-      rol: RolUsuario.administrador,
-      activo: true,
-    );
-    ref.read(currentUserProvider.notifier).state = usuarioDemo;
-    context.go(AppRoutes.ventas);
   }
 
   @override
@@ -202,30 +189,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       color: Colors.white, strokeWidth: 2),
                                 )
                               : const Text('Ingresar'),
-                        ),
-                        const SizedBox(height: 16),
-                        const Row(children: [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('o', style: TextStyle(color: AppColors.textSecondary)),
-                          ),
-                          Expanded(child: Divider()),
-                        ]),
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
-                          onPressed: _loading ? null : _entrarDemo,
-                          icon: const Icon(Icons.play_circle_outline),
-                          label: const Text('Entrar en modo Demo (sin backend)'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Modo Demo: navega la app sin conectar al backend',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                       ],
                     ),

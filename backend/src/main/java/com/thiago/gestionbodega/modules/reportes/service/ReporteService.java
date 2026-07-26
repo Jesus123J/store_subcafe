@@ -78,6 +78,24 @@ public class ReporteService {
                 .toList();
     }
 
+    /**
+     * Reporte de creditos por trabajador (por DNI). El nombre lo resuelve
+     * el frontend contra {@code /trabajadores} (passthrough a FT).
+     */
+    public List<CreditoReporteDto> creditosPorTrabajador(LocalDate desde, LocalDate hasta) {
+        return repo.creditosPorTrabajador(desde, hasta).stream()
+                .map(row -> CreditoReporteDto.builder()
+                        .dni((String) row.get("dni"))
+                        .cantidadConsumos(((Number) row.get("cantidad_consumos")).longValue())
+                        .montoPendiente((BigDecimal) row.get("monto_pendiente"))
+                        .deudaAcumulada((BigDecimal) row.get("deuda_acumulada"))
+                        .ultimoConsumo(row.get("ultimo_consumo") instanceof java.time.OffsetDateTime odt
+                                ? odt
+                                : null)
+                        .build())
+                .toList();
+    }
+
     private StockProductoDto toStockDto(Map<String, Object> row) {
         return StockProductoDto.builder()
                 .id(asUuid(row.get("id")))

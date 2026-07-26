@@ -4,10 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/validators.dart';
+import '../../data/models/proveedor_model.dart';
 import '../providers/proveedores_provider.dart';
 
+/// Dialog para crear o editar un proveedor.
+/// Si se pasa [proveedor], entra en modo edicion (RUC bloqueado).
 class ProveedorFormDialog extends ConsumerStatefulWidget {
-  const ProveedorFormDialog({super.key});
+  const ProveedorFormDialog({super.key, this.proveedor});
+
+  final ProveedorModel? proveedor;
 
   @override
   ConsumerState<ProveedorFormDialog> createState() =>
@@ -16,12 +21,26 @@ class ProveedorFormDialog extends ConsumerStatefulWidget {
 
 class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _razonSocial = TextEditingController();
-  final _ruc = TextEditingController();
-  final _direccion = TextEditingController();
-  final _telefono = TextEditingController();
+  late final TextEditingController _razonSocial;
+  late final TextEditingController _ruc;
+  late final TextEditingController _direccion;
+  late final TextEditingController _telefono;
+  late bool _activo;
   bool _loading = false;
   String? _error;
+
+  bool get _esEdicion => widget.proveedor != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.proveedor;
+    _razonSocial = TextEditingController(text: p?.razonSocial ?? '');
+    _ruc = TextEditingController(text: p?.ruc ?? '');
+    _direccion = TextEditingController(text: p?.direccion ?? '');
+    _telefono = TextEditingController(text: p?.telefono ?? '');
+    _activo = p?.activo ?? true;
+  }
 
   @override
   void dispose() {
@@ -39,12 +58,23 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
       _error = null;
     });
     try {
-      await ref.read(proveedoresControllerProvider).crear(
-            razonSocial: _razonSocial.text,
-            ruc: _ruc.text,
-            direccion: _direccion.text,
-            telefono: _telefono.text,
-          );
+      final ctrl = ref.read(proveedoresControllerProvider);
+      if (_esEdicion) {
+        await ctrl.actualizar(
+          id: widget.proveedor!.id,
+          razonSocial: _razonSocial.text,
+          direccion: _direccion.text,
+          telefono: _telefono.text,
+          activo: _activo,
+        );
+      } else {
+        await ctrl.crear(
+          razonSocial: _razonSocial.text,
+          ruc: _ruc.text,
+          direccion: _direccion.text,
+          telefono: _telefono.text,
+        );
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -56,6 +86,8 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
         padding: const EdgeInsets.all(24),
@@ -69,7 +101,10 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
                 children: [
                   const Icon(Icons.local_shipping, color: AppColors.primary),
                   const SizedBox(width: 8),
-                  Text('Nuevo proveedor', style: context.textTheme.titleLarge),
+                  Text(
+                    _esEdicion ? 'Editar proveedor' : 'Nuevo proveedor',
+                    style: context.textTheme.titleLarge,
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -87,14 +122,21 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _ruc,
-                style: const TextStyle(color: AppColors.textPrimary),
+                readOnly: _esEdicion,
+                style: TextStyle(
+                  color: _esEdicion
+                      ? AppColors.textSecondary
+                      : AppColors.textPrimary,
+                  fontFamily: 'monospace',
+                ),
                 keyboardType: TextInputType.number,
                 maxLength: 11,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'RUC *',
                   hintText: '11 dígitos',
-                  prefixIcon: Icon(Icons.badge),
+                  prefixIcon: const Icon(Icons.badge),
                   counterText: '',
+                  helperText: _esEdicion ? 'El RUC no se puede modificar' : null,
                 ),
                 validator: Validators.ruc,
               ),
@@ -119,6 +161,26 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
                   prefixIcon: Icon(Icons.phone),
                 ),
               ),
+              if (_esEdicion) ...[
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  value: _activo,
+                  onChanged: (v) => setState(() => _activo = v),
+                  title: Text(
+                    _activo ? 'Activo' : 'Inactivo',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Los inactivos no aparecen al registrar compras',
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 11),
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -129,7 +191,8 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
                   ),
                   child: Text(
                     _error!,
-                    style: const TextStyle(color: AppColors.error, fontSize: 12),
+                    style: const TextStyle(
+                        color: AppColors.error, fontSize: 12),
                   ),
                 ),
               ],
@@ -153,8 +216,14 @@ class _ProveedorFormDialogState extends ConsumerState<ProveedorFormDialog> {
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.save),
-                    label: Text(_loading ? 'Guardando...' : 'Guardar'),
+                        : Icon(_esEdicion ? Icons.save : Icons.add),
+                    label: Text(
+                      _loading
+                          ? 'Guardando...'
+                          : _esEdicion
+                              ? 'Guardar cambios'
+                              : 'Crear proveedor',
+                    ),
                   ),
                 ],
               ),

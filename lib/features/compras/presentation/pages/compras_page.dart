@@ -293,6 +293,8 @@ class _DetalleCompraDialog extends ConsumerWidget {
     final detalleAsync = ref.watch(compraDetalleProvider(compra.id));
 
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 640, maxHeight: 720),
         padding: const EdgeInsets.all(24),

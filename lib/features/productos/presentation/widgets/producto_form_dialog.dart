@@ -68,6 +68,8 @@ class _ProductoFormDialogState extends ConsumerState<ProductoFormDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 560),
         padding: const EdgeInsets.all(24),

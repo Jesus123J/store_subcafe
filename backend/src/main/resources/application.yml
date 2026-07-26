@@ -5,7 +5,10 @@ spring:
   # ─── MySQL 8 / MariaDB ───
   # Variables sensibles via env vars (con defaults para desarrollo local)
   datasource:
-    url: ${DB_URL:jdbc:mariadb://localhost:3306/gestion_bodega?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima}
+    # allowPublicKeyRetrieval + useSsl=false permiten al driver MariaDB
+    # autenticarse contra MySQL 8 con caching_sha2_password sin canal TLS
+    # (obligatorio en desarrollo local).
+    url: ${DB_URL:jdbc:mariadb://localhost:3306/gestion_bodega?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima&allowPublicKeyRetrieval=true&useSsl=false}
     username: ${DB_USER:bodega_user}
     password: ${DB_PASS:bodega_pass}
     driver-class-name: org.mariadb.jdbc.Driver
@@ -59,6 +62,25 @@ app:
   # Spring Boot Community, asi que se implementa en FlywayConfig.java).
   flyway:
     repair-on-startup: ${FLYWAY_REPAIR:true}
+
+# ─── Integracion con FinantialTracker (sistema de planilla del HSJ) ───
+# Segundo DataSource que apunta a la BD de FT para pushear la deuda mensual
+# al cerrar el mes. Si enabled=false, los endpoints devuelven 503 sin tocar
+# la BD (util para dev sin FT corriendo).
+integracion:
+  financialtracker:
+    enabled: ${FT_ENABLED:true}
+    url: ${FT_DB_URL:jdbc:mariadb://localhost:3306/financialtracker1?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima&allowPublicKeyRetrieval=true&useSsl=false}
+    user: ${FT_DB_USER:root}
+    # Default de desarrollo local (mismo criterio que los defaults de la BD
+    # bodega arriba). En produccion SIEMPRE definir FT_DB_PASS por variable
+    # de entorno.
+    password: ${FT_DB_PASS:123456}
+    # ID del service_concept en FT que representa "Consumo en bodega".
+    # Karina debe verificar/crear este concepto en la UI de FT y ajustar aqui.
+    service-concept-id: ${FT_SERVICE_CONCEPT_ID:1}
+    # Dia del mes siguiente en que se descuenta el abono.
+    dia-descuento: ${FT_DIA_DESCUENTO:5}
 
 # ─── Swagger ───
 springdoc:

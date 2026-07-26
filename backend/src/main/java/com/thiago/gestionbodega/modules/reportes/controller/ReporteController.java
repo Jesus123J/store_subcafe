@@ -1,6 +1,7 @@
 package com.thiago.gestionbodega.modules.reportes.controller;
 
 import com.thiago.gestionbodega.common.dto.ApiResponse;
+import com.thiago.gestionbodega.modules.reportes.dto.CreditoReporteDto;
 import com.thiago.gestionbodega.modules.reportes.dto.StockProductoDto;
 import com.thiago.gestionbodega.modules.reportes.dto.TopProductoDto;
 import com.thiago.gestionbodega.modules.reportes.dto.VentasDiariasDto;
@@ -56,5 +57,19 @@ public class ReporteController {
         LocalDate fin = hasta != null ? hasta : LocalDate.now();
         LocalDate inicio = desde != null ? desde : fin.minusDays(29); // ultimos 30 dias por default
         return ApiResponse.ok(service.topProductos(inicio, fin, limit));
+    }
+
+    /**
+     * Creditos por trabajador (DNI): consumos del rango + deuda acumulada total.
+     * El nombre se resuelve en el frontend contra /trabajadores (passthrough FT).
+     */
+    @GetMapping("/creditos")
+    public ApiResponse<List<CreditoReporteDto>> creditosPorTrabajador(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta
+    ) {
+        LocalDate fin = hasta != null ? hasta : LocalDate.now();
+        LocalDate inicio = desde != null ? desde : fin.minusDays(29);
+        return ApiResponse.ok(service.creditosPorTrabajador(inicio, fin));
     }
 }

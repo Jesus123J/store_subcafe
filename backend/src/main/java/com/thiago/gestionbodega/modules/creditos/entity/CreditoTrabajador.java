@@ -1,6 +1,5 @@
 package com.thiago.gestionbodega.modules.creditos.entity;
 
-import com.thiago.gestionbodega.modules.clientes.entity.Cliente;
 import com.thiago.gestionbodega.modules.ventas.entity.Venta;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,6 +10,12 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+/**
+ * Consumo a credito de un trabajador. El trabajador se identifica solo por
+ * DNI — vive en FinantialTracker.employees, no hay tabla local ni FK.
+ *
+ * Para mostrar el nombre en la UI, la app resuelve via passthrough a FT.
+ */
 @Entity
 @Table(name = "creditos_trabajadores")
 @Getter
@@ -26,9 +31,9 @@ public class CreditoTrabajador {
     @Column(length = 36)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "trabajador_id", nullable = false)
-    private Cliente trabajador;
+    /** DNI del trabajador en FinantialTracker.employees.national_id. */
+    @Column(name = "trabajador_dni", nullable = false, length = 8)
+    private String trabajadorDni;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venta_id")

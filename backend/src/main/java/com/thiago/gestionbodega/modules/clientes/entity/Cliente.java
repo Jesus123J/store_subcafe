@@ -21,9 +21,6 @@ public class Cliente extends BaseEntity {
     @Column(name = "telefono", length = 20)
     private String telefono;
 
-    @Column(name = "es_trabajador", nullable = false)
-    private boolean esTrabajador;
-
     @Column(name = "activo", nullable = false)
     private boolean activo;
 

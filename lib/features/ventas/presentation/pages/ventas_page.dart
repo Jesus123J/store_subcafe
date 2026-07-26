@@ -94,7 +94,7 @@ class _VentasPageState extends ConsumerState<VentasPage> {
                       formaPago: _toApiFormaPago(p.formaPago),
                       monto: p.monto,
                       codigoOperacion: p.codigoOperacion,
-                      trabajadorCreditoId: p.trabajadorId,
+                      trabajadorCreditoDni: p.trabajadorDni,
                     ))
                 .toList(),
           );

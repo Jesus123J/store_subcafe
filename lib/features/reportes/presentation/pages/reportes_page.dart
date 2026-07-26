@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_error_widget.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_page_header.dart';
+import '../../../trabajadores/presentation/providers/trabajadores_provider.dart';
 import '../../data/models/reportes_models.dart';
 import '../providers/reportes_provider.dart';
 
@@ -22,6 +23,7 @@ class ReportesPage extends ConsumerWidget {
     final ventasAsync = ref.watch(ventasDiariasProvider);
     final topAsync = ref.watch(topProductosProvider);
     final stockBajoAsync = ref.watch(stockBajoProvider);
+    final creditosAsync = ref.watch(creditosReporteProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -146,6 +148,11 @@ class ReportesPage extends ConsumerWidget {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    AppCard(
+                      margin: EdgeInsets.zero,
+                      child: _CreditosCard(asyncCreditos: creditosAsync),
                     ),
                   ],
                 ),
@@ -725,6 +732,376 @@ class _ChartTitle extends StatelessWidget {
           fontSize: 15,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
+        ),
+      );
+}
+
+// ─── Reporte de creditos por trabajador ──────────────────────────────
+
+class _CreditosCard extends ConsumerWidget {
+  const _CreditosCard({required this.asyncCreditos});
+  final AsyncValue<List<CreditoReporte>> asyncCreditos;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.credit_card, color: AppColors.warning),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: _ChartTitle('Créditos por trabajador'),
+            ),
+            asyncCreditos.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (lista) {
+                final total = lista.fold<double>(
+                    0, (s, c) => s + c.totalGeneral);
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Total: ${CurrencyFormatter.format(total)}',
+                    style: const TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Consumos del rango + deuda acumulada por planilla. '
+          'Los nombres vienen del sistema de planilla (FinantialTracker).',
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 16),
+        asyncCreditos.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('Error: $e',
+                style: const TextStyle(color: AppColors.error)),
+          ),
+          data: (lista) {
+            if (lista.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    'No hay créditos registrados en el rango',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+              );
+            }
+            final nombres = ref.watch(trabajadoresPorDniProvider);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _GraficoCreditos(lista: lista.take(8).toList(), nombres: nombres),
+                const SizedBox(height: 20),
+                _TablaCreditos(lista: lista, nombres: nombres),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _GraficoCreditos extends StatelessWidget {
+  const _GraficoCreditos({required this.lista, required this.nombres});
+  final List<CreditoReporte> lista;
+  final Map<String, String> nombres;
+
+  @override
+  Widget build(BuildContext context) {
+    if (lista.isEmpty) return const SizedBox.shrink();
+    final maxMonto = lista
+        .map((c) => c.totalGeneral)
+        .fold<double>(0, (a, b) => a > b ? a : b);
+    return SizedBox(
+      height: 220,
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: maxMonto * 1.15,
+          barTouchData: BarTouchData(
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (_) => AppColors.textPrimary,
+              getTooltipItem: (group, __, ___, ____) {
+                final c = lista[group.x];
+                final nombre = nombres[c.dni] ?? c.dni;
+                return BarTooltipItem(
+                  '$nombre\n',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: CurrencyFormatter.format(c.totalGeneral),
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: maxMonto / 4,
+            getDrawingHorizontalLine: (_) => const FlLine(
+              color: AppColors.border,
+              strokeWidth: 1,
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 44,
+                interval: maxMonto / 4,
+                getTitlesWidget: (v, _) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Text(
+                    'S/. ${v.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 36,
+                getTitlesWidget: (v, _) {
+                  final i = v.toInt();
+                  if (i < 0 || i >= lista.length) {
+                    return const SizedBox.shrink();
+                  }
+                  final c = lista[i];
+                  final label = nombres[c.dni]?.split(' ').first ?? c.dni;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      label.length > 8 ? '${label.substring(0, 8)}…' : label,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false)),
+          ),
+          barGroups: lista.asMap().entries.map((e) {
+            return BarChartGroupData(
+              x: e.key,
+              barRods: [
+                BarChartRodData(
+                  toY: e.value.totalGeneral,
+                  color: AppColors.warning,
+                  width: 22,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _TablaCreditos extends StatelessWidget {
+  const _TablaCreditos({required this.lista, required this.nombres});
+  final List<CreditoReporte> lista;
+  final Map<String, String> nombres;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: const BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
+            ),
+            child: const Row(
+              children: [
+                SizedBox(width: 90, child: _Th('DNI')),
+                Expanded(flex: 3, child: _Th('Trabajador')),
+                SizedBox(
+                    width: 70,
+                    child: _Th('Consumos', align: TextAlign.right)),
+                SizedBox(
+                    width: 110,
+                    child:
+                        _Th('Del período', align: TextAlign.right)),
+                SizedBox(
+                    width: 110,
+                    child:
+                        _Th('Deuda acum.', align: TextAlign.right)),
+                SizedBox(
+                    width: 110,
+                    child: _Th('Total', align: TextAlign.right)),
+              ],
+            ),
+          ),
+          // Filas
+          ...lista.asMap().entries.map((entry) {
+            final i = entry.key;
+            final c = entry.value;
+            final nombre = nombres[c.dni] ?? c.dni;
+            return Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: i > 0
+                      ? const BorderSide(color: AppColors.border)
+                      : BorderSide.none,
+                ),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 90,
+                    child: Text(
+                      c.dni,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      nombre,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 70,
+                    child: Text(
+                      '${c.cantidadConsumos}',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 110,
+                    child: Text(
+                      CurrencyFormatter.format(c.montoPendiente),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 110,
+                    child: Text(
+                      CurrencyFormatter.format(c.deudaAcumulada),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 110,
+                    child: Text(
+                      CurrencyFormatter.format(c.totalGeneral),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _Th extends StatelessWidget {
+  const _Th(this.text, {this.align = TextAlign.left});
+  final String text;
+  final TextAlign align;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        textAlign: align,
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+          letterSpacing: 0.3,
         ),
       );
 }

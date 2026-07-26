@@ -38,13 +38,17 @@ class ApiEndpoints {
   static const String reporteStock = '/reportes/stock';
   static const String reporteStockBajo = '/reportes/stock-bajo';
   static const String reporteTopProductos = '/reportes/top-productos';
+  static const String reporteCreditos = '/reportes/creditos';
 
   // Configuración
   static const String configuracion = '/configuracion';
 
-  // Clientes / Trabajadores
+  // Clientes (publico general de bodega — puntos/vales)
   static const String clientes = '/clientes';
   static const String clientesImport = '/clientes/import';
+
+  // Trabajadores (passthrough a FinantialTracker.employees — sin tabla local)
+  static const String trabajadores = '/trabajadores';
 
   // Vales
   static const String vales = '/vales';
@@ -61,4 +65,14 @@ class ApiEndpoints {
   static const String creditosDeudaAcumulada = '/creditos/deuda-acumulada';
   static const String creditosCierres = '/creditos/cierres';
   static const String creditosCerrarMes = '/creditos/cerrar-mes';
+
+  // Integracion FinantialTracker (planilla del HSJ)
+  static const String ftEnvios = '/integracion/ft/envios';
+  static const String ftHealth = '/integracion/ft/health';
+  static String ftEnviarCierre(String cierreId) =>
+      '/integracion/ft/enviar-cierre/$cierreId';
+  static String ftEnviarCredito(String creditoId) =>
+      '/integracion/ft/enviar-credito/$creditoId';
+  static String ftRevertir(String envioId) =>
+      '/integracion/ft/revertir/$envioId';
 }

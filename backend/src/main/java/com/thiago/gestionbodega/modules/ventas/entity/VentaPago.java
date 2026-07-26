@@ -1,6 +1,5 @@
 package com.thiago.gestionbodega.modules.ventas.entity;
 
-import com.thiago.gestionbodega.modules.clientes.entity.Cliente;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -13,8 +12,8 @@ import java.util.UUID;
  * Pago parcial de una venta. Una venta puede tener varios VentaPago
  * (ej: parte en efectivo, parte en Yape, parte en credito).
  *
- * En MySQL la validacion suma(pagos)==total se hace en el codigo
- * (CompraService/VentaService) porque MariaDB no soporta DEFERRABLE.
+ * Cuando forma_pago = CREDITO, trabajadorCreditoDni referencia al
+ * empleado en FinantialTracker (sin FK local — passthrough).
  */
 @Entity
 @Table(name = "venta_pagos")
@@ -45,9 +44,9 @@ public class VentaPago {
     @Column(name = "codigo_operacion", length = 20)
     private String codigoOperacion;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trabajador_credito_id")
-    private Cliente trabajadorCredito;
+    /** DNI del trabajador cuando forma_pago = CREDITO. */
+    @Column(name = "trabajador_credito_dni", length = 8)
+    private String trabajadorCreditoDni;
 
     @Column(name = "orden", nullable = false)
     @Builder.Default

@@ -43,6 +43,28 @@ class ProveedoresController {
     return ProveedorModel.fromJson(json);
   }
 
+  Future<ProveedorModel> actualizar({
+    required String id,
+    required String razonSocial,
+    String? direccion,
+    String? telefono,
+    required bool activo,
+  }) async {
+    final json = await ApiClient.instance.putData<Map<String, dynamic>>(
+      '${ApiEndpoints.proveedores}/$id',
+      body: {
+        'razonSocial': razonSocial.trim(),
+        if (direccion != null && direccion.trim().isNotEmpty)
+          'direccion': direccion.trim(),
+        if (telefono != null && telefono.trim().isNotEmpty)
+          'telefono': telefono.trim(),
+        'activo': activo,
+      },
+    );
+    _ref.invalidate(proveedoresListProvider);
+    return ProveedorModel.fromJson(json);
+  }
+
   Future<void> desactivar(String id) async {
     await ApiClient.instance.deleteData('${ApiEndpoints.proveedores}/$id');
     _ref.invalidate(proveedoresListProvider);

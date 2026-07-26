@@ -60,6 +60,8 @@ class _YapePlinDialogState extends State<YapePlinDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 720),
         padding: const EdgeInsets.all(24),

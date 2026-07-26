@@ -11,6 +11,9 @@ import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
+import '../../../trabajadores/presentation/providers/trabajadores_provider.dart';
+import '../../data/models/envio_ft_model.dart';
+import '../providers/financialtracker_provider.dart';
 
 // ─── Providers ──────────────────────────────────────────────
 
@@ -299,27 +302,32 @@ class _SeccionMes extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // Mapa DNI -> nombre viene passthrough desde FT
                   ...lista.map((r) {
+                    final trabajadores =
+                        ref.watch(trabajadoresPorDniProvider);
+                    final dni = r['dni'] as String? ?? '';
+                    final nombre = trabajadores[dni] ?? dni;
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         backgroundColor: AppColors.error,
                         child: Text(
-                          ((r['nombre_completo'] as String?) ?? '?')
-                              .substring(0, 1)
-                              .toUpperCase(),
+                          nombre.isNotEmpty
+                              ? nombre.substring(0, 1).toUpperCase()
+                              : '?',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
                       title: Text(
-                        r['nombre_completo'] as String? ?? '—',
+                        nombre,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
-                        '@${r['username']} · ${r['cantidad_consumos']} consumo(s)',
+                        'DNI $dni · ${r['cantidad_consumos']} consumo(s)',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
@@ -423,26 +431,30 @@ class _SeccionDeuda extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   ...lista.map((r) {
+                    final trabajadores =
+                        ref.watch(trabajadoresPorDniProvider);
+                    final dni = r['dni'] as String? ?? '';
+                    final nombre = trabajadores[dni] ?? dni;
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         backgroundColor: AppColors.warning,
                         child: Text(
-                          ((r['nombre_completo'] as String?) ?? '?')
-                              .substring(0, 1)
-                              .toUpperCase(),
+                          nombre.isNotEmpty
+                              ? nombre.substring(0, 1).toUpperCase()
+                              : '?',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
                       title: Text(
-                        r['nombre_completo'] as String? ?? '—',
+                        nombre,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
                         ),
                       ),
                       subtitle: Text(
-                        '@${r['username']}',
+                        'DNI $dni',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
@@ -475,7 +487,9 @@ class _SeccionDeuda extends ConsumerWidget {
 class _SeccionHistorial extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(cierresHistorialProvider);
+    final cierresAsync = ref.watch(cierresHistorialProvider);
+    final enviosAsync = ref.watch(enviosFtProvider);
+
     return AppCard(
       margin: EdgeInsets.zero,
       child: Column(
@@ -497,7 +511,7 @@ class _SeccionHistorial extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           AppAsyncView<List<Map<String, dynamic>>>(
-            value: async,
+            value: cierresAsync,
             onRetry: () => ref.invalidate(cierresHistorialProvider),
             dataBuilder: (lista) {
               if (lista.isEmpty) {
@@ -511,41 +525,27 @@ class _SeccionHistorial extends ConsumerWidget {
                   ),
                 );
               }
+              // Mapa cierreId -> envio activo (si existe)
+              final envios = enviosAsync.valueOrNull ?? const <EnvioFtModel>[];
+              final envioPorCierre = <String, EnvioFtModel>{
+                for (final e in envios)
+                  if (e.activo && e.cierreId != null) e.cierreId!: e,
+              };
+
               return Column(
                 children: lista.map((r) {
+                  final id = r['id'] as String;
                   final anio = r['anio'] as int;
                   final mes = r['mes'] as int;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
-                      Icons.event_busy,
-                      color: AppColors.info,
-                    ),
-                    title: Text(
-                      _mesAnio(mes, anio),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Cerrado el ${AppDateUtils.formatDate(DateTime.parse(r['fecha_cierre'] as String))}'
-                      ' · ${r['trabajadores_afectados']} trabajador(es)',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                    trailing: Text(
-                      CurrencyFormatter.format(
-                        (r['monto_total'] as num).toDouble(),
-                      ),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.info,
-                        fontSize: 16,
-                      ),
-                    ),
+                  final envio = envioPorCierre[id];
+                  return _CierreRow(
+                    cierreId: id,
+                    titulo: _mesAnio(mes, anio),
+                    subtitulo:
+                        'Cerrado el ${AppDateUtils.formatDate(DateTime.parse(r['fecha_cierre'] as String))}'
+                        ' · ${r['trabajadores_afectados']} trabajador(es)',
+                    monto: (r['monto_total'] as num).toDouble(),
+                    envio: envio,
                   );
                 }).toList(),
               );
@@ -562,6 +562,222 @@ class _SeccionHistorial extends ConsumerWidget {
       'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre',
     ][m];
     return '$nombre $a';
+  }
+}
+
+/// Fila de un cierre con boton para enviar/revertir hacia FinantialTracker.
+class _CierreRow extends ConsumerStatefulWidget {
+  const _CierreRow({
+    required this.cierreId,
+    required this.titulo,
+    required this.subtitulo,
+    required this.monto,
+    required this.envio,
+  });
+
+  final String cierreId;
+  final String titulo;
+  final String subtitulo;
+  final double monto;
+  final EnvioFtModel? envio;
+
+  @override
+  ConsumerState<_CierreRow> createState() => _CierreRowState();
+}
+
+class _CierreRowState extends ConsumerState<_CierreRow> {
+  bool _busy = false;
+
+  Future<void> _enviar() async {
+    setState(() => _busy = true);
+    try {
+      final res = await ref
+          .read(ftControllerProvider)
+          .enviarCierre(widget.cierreId);
+      if (!mounted) return;
+      context.showSnack(
+        'Enviado a planilla · lote #${res.loteIdFt} · ${res.trabajadoresEnviados} trabajador(es)',
+      );
+    } catch (e) {
+      if (mounted) context.showSnack('Error: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _revertir(EnvioFtModel envio) async {
+    final motivo = await showDialog<String>(
+      context: context,
+      builder: (_) => const _MotivoReversionDialog(),
+    );
+    if (motivo == null) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(ftControllerProvider).revertir(envio.id, motivo);
+      if (!mounted) return;
+      context.showSnack('Envío revertido');
+    } catch (e) {
+      if (mounted) context.showSnack('Error: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final envio = widget.envio;
+    final yaEnviado = envio != null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            yaEnviado ? Icons.check_circle : Icons.event_busy,
+            color: yaEnviado ? AppColors.secondary : AppColors.info,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.titulo,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  widget.subtitulo,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                if (yaEnviado)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Enviado a planilla · lote #${envio.loteIdFt}',
+                            style: const TextStyle(
+                              color: AppColors.secondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            CurrencyFormatter.format(widget.monto),
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.info,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (_busy)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else if (yaEnviado)
+            TextButton.icon(
+              onPressed: () => _revertir(envio),
+              icon: const Icon(Icons.undo, size: 16),
+              label: const Text('Revertir'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            )
+          else
+            FilledButton.icon(
+              onPressed: _enviar,
+              icon: const Icon(Icons.send, size: 16),
+              label: const Text('Enviar a planilla'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MotivoReversionDialog extends StatefulWidget {
+  const _MotivoReversionDialog();
+
+  @override
+  State<_MotivoReversionDialog> createState() => _MotivoReversionDialogState();
+}
+
+class _MotivoReversionDialogState extends State<_MotivoReversionDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      icon: const Icon(Icons.undo, color: AppColors.warning, size: 40),
+      title: const Text('Revertir envío'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Se borrarán los abonos del lote en FinantialTracker que aún no tengan pagos aplicados.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ctrl,
+            maxLines: 2,
+            style: const TextStyle(color: AppColors.textPrimary),
+            decoration: const InputDecoration(
+              labelText: 'Motivo (opcional)',
+              hintText: 'Ej: cierre duplicado, corrección de montos',
+              isDense: true,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_ctrl.text.trim()),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+          child: const Text('Revertir'),
+        ),
+      ],
+    );
   }
 }
 

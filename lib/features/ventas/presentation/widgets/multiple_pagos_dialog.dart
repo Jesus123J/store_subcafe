@@ -24,20 +24,22 @@ enum FormaPago {
 }
 
 /// Un pago parcial: forma de pago + monto + (opcional) código de operación.
-/// Si formaPago == CREDITO, [trabajadorId] y [trabajadorNombre] estan presentes.
+/// Si formaPago == CREDITO, [trabajadorDni] y [trabajadorNombre] estan presentes.
+/// El trabajador vive en FinantialTracker — aca solo cacheamos DNI+nombre
+/// para no volver a preguntar a FT en el mismo flujo.
 class PagoParcial {
   PagoParcial({
     required this.formaPago,
     required this.monto,
     this.codigoOperacion,
-    this.trabajadorId,
+    this.trabajadorDni,
     this.trabajadorNombre,
   });
 
   final FormaPago formaPago;
   final double monto;
   final String? codigoOperacion;
-  final String? trabajadorId;
+  final String? trabajadorDni;
   final String? trabajadorNombre;
 }
 
@@ -80,9 +82,16 @@ class _MultiplePagosDialogState extends State<MultiplePagosDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 560),
         padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -423,7 +432,7 @@ class _AgregarPagoSheetState extends ConsumerState<_AgregarPagoSheet> {
       codigoOperacion: _forma.requiereCodigo && _codigoCtrl.text.isNotEmpty
           ? _codigoCtrl.text.trim()
           : null,
-      trabajadorId: _forma == FormaPago.credito ? _trabajador?.id : null,
+      trabajadorDni: _forma == FormaPago.credito ? _trabajador?.dni : null,
       trabajadorNombre:
           _forma == FormaPago.credito ? _trabajador?.nombreCompleto : null,
     ));
@@ -432,9 +441,16 @@ class _AgregarPagoSheetState extends ConsumerState<_AgregarPagoSheet> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 420),
         padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Form(
           key: _formKey,
           child: Column(
@@ -636,24 +652,132 @@ class _SelectorTrabajador extends ConsumerWidget {
             ),
           );
         }
-        return DropdownButtonFormField<TrabajadorDto>(
-          value: value,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Trabajador *',
-            prefixIcon: Icon(Icons.badge),
-            isDense: true,
-          ),
-          items: lista
-              .map((t) => DropdownMenuItem(
-                    value: t,
-                    child: Text(
-                      '${t.dni} — ${t.nombreCompleto}',
-                      overflow: TextOverflow.ellipsis,
+        return Autocomplete<TrabajadorDto>(
+          initialValue: value == null
+              ? const TextEditingValue()
+              : TextEditingValue(
+                  text: '${value!.dni} — ${value!.nombreCompleto}',
+                ),
+          displayStringForOption: (t) => '${t.dni} — ${t.nombreCompleto}',
+          optionsBuilder: (input) {
+            final q = input.text.trim().toLowerCase();
+            if (q.isEmpty) return lista.take(20);
+            return lista.where(
+              (t) =>
+                  t.dni.contains(q) ||
+                  t.nombreCompleto.toLowerCase().contains(q),
+            );
+          },
+          onSelected: onChanged,
+          fieldViewBuilder:
+              (context, textCtrl, focusNode, onFieldSubmitted) {
+            return TextFormField(
+              controller: textCtrl,
+              focusNode: focusNode,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(
+                labelText: 'Trabajador *',
+                hintText: 'Escribe DNI o nombre...',
+                prefixIcon: Icon(Icons.badge),
+                isDense: true,
+              ),
+              onChanged: (_) {
+                // Si el usuario borra o edita, invalidar la seleccion
+                // hasta que elija otra opcion (evita "fantasmas").
+                if (value != null) onChanged(null);
+              },
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            final list = options.toList();
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxHeight: 260,
+                    maxWidth: 480,
+                  ),
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => const Divider(
+                      height: 1,
+                      color: AppColors.border,
                     ),
-                  ))
-              .toList(),
-          onChanged: onChanged,
+                    itemBuilder: (context, i) {
+                      final t = list[i];
+                      return InkWell(
+                        onTap: () => onSelected(t),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 92,
+                                child: Text(
+                                  t.dni,
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    color: AppColors.textPrimary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  t.nombreCompleto,
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 13,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (t.estadoEmpleo != null &&
+                                  t.estadoEmpleo!.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.info
+                                        .withValues(alpha: 0.12),
+                                    borderRadius:
+                                        BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    t.estadoEmpleo!,
+                                    style: const TextStyle(
+                                      color: AppColors.info,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

@@ -11,21 +11,24 @@ class PagoRequest {
     required this.formaPago,
     required this.monto,
     this.codigoOperacion,
-    this.trabajadorCreditoId,
+    this.trabajadorCreditoDni,
   });
 
   /// 'EFECTIVO' | 'YAPE' | 'PLIN' | 'NIUBIZ' | 'CREDITO'
   final String formaPago;
   final double monto;
   final String? codigoOperacion;
-  final String? trabajadorCreditoId;
+  /// DNI del trabajador (8 digitos) cuando formaPago = 'CREDITO'.
+  /// El trabajador vive en FinantialTracker — la bodega no lo guarda local.
+  final String? trabajadorCreditoDni;
 
   Map<String, dynamic> toJson() => {
         'formaPago': formaPago,
         'monto': monto,
         if (codigoOperacion != null && codigoOperacion!.isNotEmpty)
           'codigoOperacion': codigoOperacion,
-        if (trabajadorCreditoId != null) 'trabajadorCreditoId': trabajadorCreditoId,
+        if (trabajadorCreditoDni != null)
+          'trabajadorCreditoDni': trabajadorCreditoDni,
       };
 }
 
