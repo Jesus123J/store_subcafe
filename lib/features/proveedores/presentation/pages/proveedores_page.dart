@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/extensions/context_extensions.dart';
+import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
+import '../../../compras/presentation/providers/compras_provider.dart';
 import '../../data/models/proveedor_model.dart';
 import '../providers/proveedores_provider.dart';
 import '../widgets/proveedor_form_dialog.dart';
@@ -210,32 +213,232 @@ class _Body extends StatelessWidget {
                                 ? AppColors.secondary
                                 : AppColors.textSecondary,
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined,
-                                    size: 18, color: AppColors.primary),
-                                tooltip: 'Editar',
-                                onPressed: () {},
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.shopping_cart_outlined,
-                                    size: 18, color: AppColors.secondary),
-                                tooltip: 'Ver compras',
-                                onPressed: () {},
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ],
-                          ),
+                          _AccionesProveedor(proveedor: p),
                         ],
                       ))
                   .toList(),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Botones de accion por fila ──────────────────────────────────────
+
+class _AccionesProveedor extends ConsumerWidget {
+  const _AccionesProveedor({required this.proveedor});
+  final ProveedorModel proveedor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.edit_outlined,
+              size: 18, color: AppColors.primary),
+          tooltip: 'Editar',
+          visualDensity: VisualDensity.compact,
+          onPressed: () async {
+            final ok = await showDialog<bool>(
+              context: context,
+              builder: (_) => ProveedorFormDialog(proveedor: proveedor),
+            );
+            if (ok == true && context.mounted) {
+              context.showSnack('Proveedor actualizado');
+            }
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.shopping_cart_outlined,
+              size: 18, color: AppColors.secondary),
+          tooltip: 'Ver compras a este proveedor',
+          visualDensity: VisualDensity.compact,
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (_) => _ComprasProveedorDialog(proveedor: proveedor),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Dialog: compras de un proveedor ─────────────────────────────────
+
+class _ComprasProveedorDialog extends ConsumerWidget {
+  const _ComprasProveedorDialog({required this.proveedor});
+  final ProveedorModel proveedor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(comprasListProvider);
+    return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 640, maxHeight: 640),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.shopping_cart,
+                      color: AppColors.secondary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Compras a proveedor',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        proveedor.razonSocial,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'RUC ${proveedor.ruc}',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: async.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: Text('Error: $e',
+                      style: const TextStyle(color: AppColors.error)),
+                ),
+                data: (todas) {
+                  final compras = todas
+                      .where((c) => c.proveedor == proveedor.razonSocial)
+                      .toList();
+                  if (compras.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Este proveedor aún no tiene compras registradas',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    );
+                  }
+                  final totalGasto = compras.fold<double>(
+                      0, (s, c) => s + c.total);
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              AppColors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${compras.length} compra(s)',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              'Total: ${CurrencyFormatter.format(totalGasto)}',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: compras.length,
+                          separatorBuilder: (_, __) =>
+                              const Divider(height: 1),
+                          itemBuilder: (_, i) {
+                            final c = compras[i];
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(
+                                Icons.receipt_long,
+                                color: AppColors.textSecondary,
+                              ),
+                              title: Text(
+                                c.nroDocumento ?? 'Sin nro doc',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                              subtitle: Text(
+                                AppDateUtils.formatDateTime(c.fecha),
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              trailing: Text(
+                                CurrencyFormatter.format(c.total),
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
