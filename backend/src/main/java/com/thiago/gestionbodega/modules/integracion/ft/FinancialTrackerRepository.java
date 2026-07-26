@@ -69,6 +69,8 @@ public class FinancialTrackerRepository {
                        employment_status_code AS codigo_estado
                   FROM employees
                  WHERE national_id IS NOT NULL AND national_id != ''
+                   AND employee_id NOT IN (SELECT u.idEmployee FROM user u
+                       WHERE u.state = '9' OR UPPER(u.rol) LIKE '%ADMINISTRADOR%')
                  ORDER BY fullName
                 """, new MapSqlParameterSource());
     }

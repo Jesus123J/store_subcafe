@@ -335,6 +335,12 @@ public class FtEmpleadosController {
             data.put("motivo", "SUPER_ADMIN");
             return ApiResponse.ok(data);
         }
+        // Las cuentas con rol de administrador tampoco se editan.
+        if (repo.rolUsuario(username).orElse("").toUpperCase().contains("ADMINISTRADOR")) {
+            data.put("actualizado", false);
+            data.put("motivo", "ADMINISTRADOR");
+            return ApiResponse.ok(data);
+        }
 
         String hash = BCrypt.hashpw(texto(body, "password"), BCrypt.gensalt(12));
         data.put("actualizado", repo.actualizarPasswordUsuario(username, hash));
@@ -355,6 +361,12 @@ public class FtEmpleadosController {
         if (estadoOpt.isPresent() && estadoOpt.get() == 9) {
             data.put("actualizado", false);
             data.put("motivo", "SUPER_ADMIN");
+            return ApiResponse.ok(data);
+        }
+        // Las cuentas con rol de administrador tampoco se editan.
+        if (repo.rolUsuario(username).orElse("").toUpperCase().contains("ADMINISTRADOR")) {
+            data.put("actualizado", false);
+            data.put("motivo", "ADMINISTRADOR");
             return ApiResponse.ok(data);
         }
 

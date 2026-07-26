@@ -60,9 +60,16 @@ public class FtEmpleadosRepository {
               FROM employees e
             """;
 
-    /** Subquery del DAO original: excluye empleados que son super admin (state 9). */
+    /**
+     * Subquery del DAO original AMPLIADA: excluye de todos los listados a
+     * los empleados vinculados a cuentas de administrador — super admin
+     * (state 9) y cualquier usuario con rol ADMINISTRADOR/SUPER
+     * ADMINISTRADOR. Los administradores no deben aparecer en busquedas,
+     * listas ni reportes.
+     */
     private static final String EXCLUIR_SUPER_ADMIN =
-            " e.employee_id NOT IN (SELECT u.idEmployee FROM user u WHERE u.state = '9') ";
+            " e.employee_id NOT IN (SELECT u.idEmployee FROM user u "
+            + "WHERE u.state = '9' OR UPPER(u.rol) LIKE '%ADMINISTRADOR%') ";
 
     /**
      * Mismo mapeo de estado a codigo que hace el EmployeeDao original:
@@ -379,7 +386,11 @@ public class FtEmpleadosRepository {
                         .addValue("rol", rol)) > 0;
     }
 
-    /** UserDao.getAllUsers(): mismas columnas (incluye hash, como el original). */
+    /**
+     * UserDao.getAllUsers(): mismas columnas (incluye hash, como el
+     * original), pero SIN cuentas de administrador — no deben aparecer en
+     * la lista de usuarios ni en ningun reporte.
+     */
     public List<Map<String, Object>> listarUsuarios() {
         return ftJdbc.queryForList("""
                 SELECT u.iduser, u.username, u.password,
@@ -387,6 +398,8 @@ public class FtEmpleadosRepository {
                        u.rol, u.state
                   FROM user u
                   JOIN employees e ON u.idEmployee = e.employee_id
+                 WHERE u.state <> '9'
+                   AND (u.rol IS NULL OR UPPER(u.rol) NOT LIKE '%ADMINISTRADOR%')
                 """, new MapSqlParameterSource());
     }
 
