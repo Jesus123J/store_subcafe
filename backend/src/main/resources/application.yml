@@ -72,7 +72,10 @@ integracion:
     enabled: ${FT_ENABLED:true}
     url: ${FT_DB_URL:jdbc:mariadb://localhost:3306/financialtracker1?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=America/Lima&allowPublicKeyRetrieval=true&useSsl=false}
     user: ${FT_DB_USER:root}
-    password: ${FT_DB_PASS:}
+    # Default de desarrollo local (mismo criterio que los defaults de la BD
+    # bodega arriba). En produccion SIEMPRE definir FT_DB_PASS por variable
+    # de entorno.
+    password: ${FT_DB_PASS:123456}
     # ID del service_concept en FT que representa "Consumo en bodega".
     # Karina debe verificar/crear este concepto en la UI de FT y ajustar aqui.
     service-concept-id: ${FT_SERVICE_CONCEPT_ID:1}
