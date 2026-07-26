@@ -114,3 +114,35 @@ class TopProductoReporte {
   final double cantidadVendida;
   final double totalFacturado;
 }
+
+/// Fila del reporte de creditos por trabajador (DNI). Nombre resuelto
+/// en la UI contra el provider de trabajadores (passthrough a FT).
+class CreditoReporte {
+  CreditoReporte({
+    required this.dni,
+    required this.cantidadConsumos,
+    required this.montoPendiente,
+    required this.deudaAcumulada,
+    this.ultimoConsumo,
+  });
+
+  factory CreditoReporte.fromJson(Map<String, dynamic> j) {
+    return CreditoReporte(
+      dni: j['dni'] as String,
+      cantidadConsumos: (j['cantidadConsumos'] as num).toInt(),
+      montoPendiente: (j['montoPendiente'] as num).toDouble(),
+      deudaAcumulada: (j['deudaAcumulada'] as num).toDouble(),
+      ultimoConsumo: j['ultimoConsumo'] != null
+          ? DateTime.parse(j['ultimoConsumo'] as String)
+          : null,
+    );
+  }
+
+  final String dni;
+  final int cantidadConsumos;
+  final double montoPendiente;
+  final double deudaAcumulada;
+  final DateTime? ultimoConsumo;
+
+  double get totalGeneral => montoPendiente + deudaAcumulada;
+}

@@ -38,6 +38,7 @@ class ApiEndpoints {
   static const String reporteStock = '/reportes/stock';
   static const String reporteStockBajo = '/reportes/stock-bajo';
   static const String reporteTopProductos = '/reportes/top-productos';
+  static const String reporteCreditos = '/reportes/creditos';
 
   // Configuración
   static const String configuracion = '/configuracion';
@@ -72,5 +73,6 @@ class ApiEndpoints {
       '/integracion/ft/enviar-cierre/$cierreId';
   static String ftEnviarCredito(String creditoId) =>
       '/integracion/ft/enviar-credito/$creditoId';
-  static String ftRevertir(String envioId) => '/integracion/ft/revertir/$envioId';
+  static String ftRevertir(String envioId) =>
+      '/integracion/ft/revertir/$envioId';
 }

@@ -142,6 +142,44 @@ public class ReporteRepository {
         return jdbc.queryForList(sql, params);
     }
 
+    // ─── Creditos por trabajador ───────────────────────────────────────
+
+    /**
+     * Agregado de creditos por trabajador (DNI) en un rango de fechas.
+     * Combina consumos del periodo (creditos_trabajadores) con la deuda
+     * acumulada actual (deuda_trabajadores) para dar la foto completa.
+     */
+    public List<Map<String, Object>> creditosPorTrabajador(LocalDate desde, LocalDate hasta) {
+        var sql = """
+                SELECT
+                    dni_agregado.dni,
+                    COALESCE(consumos.cantidad, 0)   AS cantidad_consumos,
+                    COALESCE(consumos.monto, 0)      AS monto_pendiente,
+                    COALESCE(consumos.ultimo, NULL)  AS ultimo_consumo,
+                    COALESCE(deuda.monto_total, 0)   AS deuda_acumulada
+                FROM (
+                    SELECT DISTINCT trabajador_dni AS dni FROM creditos_trabajadores
+                    WHERE fecha >= :desde AND fecha < :hasta
+                    UNION
+                    SELECT DISTINCT trabajador_dni AS dni FROM deuda_trabajadores
+                    WHERE monto_total > 0
+                ) dni_agregado
+                LEFT JOIN (
+                    SELECT trabajador_dni AS dni,
+                           COUNT(*) AS cantidad,
+                           SUM(monto) AS monto,
+                           MAX(fecha) AS ultimo
+                    FROM creditos_trabajadores
+                    WHERE fecha >= :desde AND fecha < :hasta
+                    GROUP BY trabajador_dni
+                ) consumos ON consumos.dni = dni_agregado.dni
+                LEFT JOIN deuda_trabajadores deuda
+                       ON deuda.trabajador_dni = dni_agregado.dni
+                ORDER BY (COALESCE(consumos.monto, 0) + COALESCE(deuda.monto_total, 0)) DESC
+                """;
+        return jdbc.queryForList(sql, rangoParams(desde, hasta));
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────
 
     private MapSqlParameterSource rangoParams(LocalDate desde, LocalDate hasta) {

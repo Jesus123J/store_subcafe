@@ -34,3 +34,14 @@ final stockBajoProvider =
       .map((e) => StockProductoReporte.fromJson(e as Map<String, dynamic>))
       .toList();
 });
+
+/// Reporte de creditos por trabajador (ultimos 30 dias por defecto).
+final creditosReporteProvider =
+    FutureProvider.autoDispose<List<CreditoReporte>>((ref) async {
+  final list = await ApiClient.instance.getData<List<dynamic>>(
+    ApiEndpoints.reporteCreditos,
+  );
+  return list
+      .map((e) => CreditoReporte.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
