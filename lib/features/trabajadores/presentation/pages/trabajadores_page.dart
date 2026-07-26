@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/app_async_value.dart';
-import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 import '../../data/models/trabajador_dto.dart';
 import '../providers/trabajadores_provider.dart';
@@ -97,89 +97,78 @@ class _BodyState extends State<_Body> {
           }).toList();
 
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: AppCard(
-        margin: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: AppColors.info.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                    color: AppColors.info.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.link, size: 18, color: AppColors.info),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '${widget.trabajadores.length} trabajadores en vivo desde FinantialTracker. '
-                      'Los abonos, préstamos y altas/bajas se administran allá.',
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 12),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Banner de origen
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.info.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: AppColors.info.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.link, size: 20, color: AppColors.info),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${widget.trabajadores.length} trabajadores sincronizados en vivo desde FinantialTracker. '
+                    'Los abonos, préstamos y altas/bajas se administran allá.',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 12,
                     ),
                   ),
-                ],
-              ),
-            ),
-            TextField(
-              controller: _busquedaCtrl,
-              onChanged: (_) => setState(() {}),
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: const InputDecoration(
-                hintText: 'Buscar por DNI o nombre...',
-                prefixIcon: Icon(Icons.search),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: SingleChildScrollView(
-                child: DataTable(
-                  columnSpacing: 24,
-                  headingRowColor:
-                      WidgetStateProperty.all(AppColors.background),
-                  headingTextStyle: const TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                  dataTextStyle: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                  ),
-                  columns: const [
-                    DataColumn(label: Text('DNI')),
-                    DataColumn(label: Text('Nombre completo')),
-                  ],
-                  rows: filtrados
-                      .map((t) => DataRow(cells: [
-                            DataCell(Text(
-                              t.dni,
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                color: AppColors.textPrimary,
-                              ),
-                            )),
-                            DataCell(Text(
-                              t.nombreCompleto,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            )),
-                          ]))
-                      .toList(),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: AppDataTable(
+              searchController: _busquedaCtrl,
+              onSearchChanged: () => setState(() {}),
+              searchHint: 'Buscar por DNI o nombre...',
+              totalItems: widget.trabajadores.length,
+              filteredItems: filtrados.length,
+              emptyMessage:
+                  'No hay trabajadores que coincidan con la búsqueda',
+              columns: const [
+                AppTableColumn(label: 'DNI', width: 120),
+                AppTableColumn(label: 'Nombre completo', flex: 3),
+              ],
+              rows: filtrados
+                  .map((t) => AppTableRow(
+                        cells: [
+                          Text(
+                            t.dni,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                          Text(
+                            t.nombreCompleto,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ))
+                  .toList(),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -9,7 +9,7 @@ import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../shared/widgets/app_async_value.dart';
-import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 import '../../../trabajadores/presentation/providers/trabajadores_provider.dart';
@@ -125,123 +125,21 @@ class ValesPage extends ConsumerWidget {
   }
 }
 
-class _Body extends StatelessWidget {
+class _Body extends StatefulWidget {
   const _Body({required this.vales});
   final List<ValeDto> vales;
 
   @override
-  Widget build(BuildContext context) {
-    final activos = vales.where((v) => v.estado == 'ACTIVO').toList();
-    final montoActivo = activos.fold<double>(0, (s, v) => s + v.saldo);
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: _Stat(
-                  icon: Icons.confirmation_number,
-                  color: AppColors.primary,
-                  label: 'Vales activos',
-                  value: '${activos.length}',
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _Stat(
-                  icon: Icons.account_balance_wallet,
-                  color: AppColors.secondary,
-                  label: 'Saldo disponible',
-                  value: CurrencyFormatter.format(montoActivo),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _Stat(
-                  icon: Icons.history,
-                  color: AppColors.info,
-                  label: 'Total emitidos',
-                  value: '${vales.length}',
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: AppCard(
-            child: SingleChildScrollView(
-              child: DataTable(
-                columnSpacing: 16,
-                headingRowColor:
-                    WidgetStateProperty.all(AppColors.background),
-                headingTextStyle: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-                dataTextStyle: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                ),
-                columns: const [
-                  DataColumn(label: Text('Código')),
-                  DataColumn(label: Text('Tipo')),
-                  DataColumn(label: Text('Asignado a')),
-                  DataColumn(label: Text('Monto / Saldo'), numeric: true),
-                  DataColumn(label: Text('Vence')),
-                  DataColumn(label: Text('Estado')),
-                ],
-                rows: vales
-                    .map((v) => DataRow(cells: [
-                          DataCell(Text(
-                            v.codigo,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                          )),
-                          DataCell(_Chip(
-                            label: v.tipo,
-                            color: v.tipo == 'CASH'
-                                ? AppColors.secondary
-                                : AppColors.primary,
-                          )),
-                          DataCell(Text(
-                            v.tipo == 'CASH'
-                                ? '— (al portador)'
-                                : '${v.clienteNombre ?? "?"}\n${v.clienteDni ?? ""}',
-                            style: const TextStyle(
-                                color: AppColors.textPrimary, fontSize: 12),
-                          )),
-                          DataCell(Text(
-                            '${CurrencyFormatter.format(v.saldo)}\n'
-                            '/ ${CurrencyFormatter.format(v.montoInicial)}',
-                            textAlign: TextAlign.right,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 12,
-                            ),
-                          )),
-                          DataCell(Text(
-                            v.fechaVencimiento != null
-                                ? AppDateUtils.formatDate(v.fechaVencimiento!)
-                                : 'Sin vencer',
-                            style: const TextStyle(color: AppColors.textPrimary),
-                          )),
-                          DataCell(_Chip(
-                            label: v.estado,
-                            color: _colorEstado(v.estado),
-                          )),
-                        ]))
-                    .toList(),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  final _busquedaCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _busquedaCtrl.dispose();
+    super.dispose();
   }
 
   Color _colorEstado(String e) {
@@ -253,85 +151,167 @@ class _Body extends StatelessWidget {
       _ => AppColors.textSecondary,
     };
   }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.color});
-  final String label;
-  final Color color;
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.value,
-  });
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
+    final activos = widget.vales.where((v) => v.estado == 'ACTIVO').toList();
+    final montoActivo = activos.fold<double>(0, (s, v) => s + v.saldo);
+
+    final q = _busquedaCtrl.text.toLowerCase();
+    final filtrados = q.isEmpty
+        ? widget.vales
+        : widget.vales.where((v) {
+            return v.codigo.toLowerCase().contains(q) ||
+                (v.clienteNombre?.toLowerCase().contains(q) ?? false) ||
+                (v.clienteDni?.contains(q) ?? false);
+          }).toList();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 26),
+          Row(
+            children: [
+              Expanded(
+                child: AppStatTile(
+                  icon: Icons.confirmation_number,
+                  color: AppColors.primary,
+                  label: 'Vales activos',
+                  value: '${activos.length}',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppStatTile(
+                  icon: Icons.account_balance_wallet,
+                  color: AppColors.secondary,
+                  label: 'Saldo disponible',
+                  value: CurrencyFormatter.format(montoActivo),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppStatTile(
+                  icon: Icons.history,
+                  color: AppColors.info,
+                  label: 'Total emitidos',
+                  value: '${widget.vales.length}',
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 20),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
+            child: AppDataTable(
+              searchController: _busquedaCtrl,
+              onSearchChanged: () => setState(() {}),
+              searchHint: 'Buscar por código, nombre o DNI...',
+              totalItems: widget.vales.length,
+              filteredItems: filtrados.length,
+              emptyMessage: 'No hay vales que coincidan con la búsqueda',
+              columns: const [
+                AppTableColumn(label: 'Código', width: 120),
+                AppTableColumn(label: 'Tipo', width: 80),
+                AppTableColumn(label: 'Asignado a', flex: 3),
+                AppTableColumn(
+                    label: 'Saldo / Monto',
+                    width: 130,
+                    align: TextAlign.right),
+                AppTableColumn(label: 'Vence', width: 110),
+                AppTableColumn(label: 'Estado', width: 100),
               ],
+              rows: filtrados
+                  .map((v) => AppTableRow(
+                        cells: [
+                          Text(
+                            v.codigo,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          AppBadge(
+                            label: v.tipo,
+                            color: v.tipo == 'CASH'
+                                ? AppColors.secondary
+                                : AppColors.primary,
+                          ),
+                          v.tipo == 'CASH'
+                              ? const Text(
+                                  '— al portador',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                )
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      v.clienteNombre ?? '?',
+                                      style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'DNI ${v.clienteDni ?? "—"}',
+                                      style: const TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 11,
+                                        fontFeatures: [
+                                          FontFeature.tabularFigures()
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                CurrencyFormatter.format(v.saldo),
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                              Text(
+                                'de ${CurrencyFormatter.format(v.montoInicial)}',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            v.fechaVencimiento != null
+                                ? AppDateUtils.formatDate(v.fechaVencimiento!)
+                                : 'Sin vencer',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          AppBadge(
+                            label: v.estado,
+                            color: _colorEstado(v.estado),
+                          ),
+                        ],
+                      ))
+                  .toList(),
             ),
           ),
         ],
