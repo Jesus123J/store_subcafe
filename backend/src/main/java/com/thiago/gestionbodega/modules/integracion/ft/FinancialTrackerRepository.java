@@ -62,9 +62,11 @@ public class FinancialTrackerRepository {
      */
     public List<Map<String, Object>> listarEmpleados() {
         return ftJdbc.queryForList("""
-                SELECT national_id AS dni,
+                SELECT employee_id AS id,
+                       national_id AS dni,
                        fullName AS nombre_completo,
-                       employment_status AS estado_empleo
+                       employment_status AS estado_empleo,
+                       employment_status_code AS codigo_estado
                   FROM employees
                  WHERE national_id IS NOT NULL AND national_id != ''
                  ORDER BY fullName
@@ -207,6 +209,109 @@ public class FinancialTrackerRepository {
         // 3. Borrar los abonos del lote
         return ftJdbc.update("DELETE FROM abono WHERE lote_id = :id",
                 new MapSqlParameterSource("id", loteId));
+    }
+
+    // ─── Consultas de solo lectura (API sobre datos de FT) ─────────────
+    // Estas queries NO escriben nada en financialtracker1: exponen via REST
+    // lo que la app Swing (FinantialTracker) consulta con sus DAOs.
+
+    /** Detalle de un empleado por DNI (peruano o carnet de extranjeria). */
+    public Optional<Map<String, Object>> buscarEmpleadoPorDni(String dni) {
+        List<Map<String, Object>> rows = ftJdbc.queryForList("""
+                SELECT employee_id AS id,
+                       national_id AS dni,
+                       fullName AS nombreCompleto,
+                       gender AS genero,
+                       employment_status AS estadoEmpleo,
+                       employment_status_code AS codigoEstado,
+                       start_date AS fechaIngreso
+                  FROM employees
+                 WHERE national_id = :dni
+                 LIMIT 1
+                """, new MapSqlParameterSource("dni", dni));
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    /**
+     * Prestamos de un empleado, todos los estados.
+     * OJO: loan.EmployeeID guarda el DNI, no el employee_id numerico
+     * (asi lo inserta ModelManageLoan en la app Swing).
+     */
+    public List<Map<String, Object>> listarPrestamosPorDni(String dni) {
+        return ftJdbc.queryForList("""
+                SELECT ID AS id,
+                       SoliNum AS soliNum,
+                       RequestedAmount AS montoSolicitado,
+                       AmountWithdrawn AS montoGirado,
+                       Dues AS cuotas,
+                       PaymentDate AS fechaPago,
+                       State AS estado,
+                       StateLoan AS estadoPrestamo,
+                       RefinanceParentID AS refinanciaA,
+                       CreatedAt AS creadoEn,
+                       Type AS tipo,
+                       PaymentResponsibility AS responsablePago
+                  FROM loan
+                 WHERE EmployeeID = :dni
+                 ORDER BY ID DESC
+                """, new MapSqlParameterSource("dni", dni));
+    }
+
+    /**
+     * Abonos de un empleado. abono.Employee_id guarda el employee_id
+     * numerico (a diferencia de loan), por eso el join via employees.
+     */
+    public List<Map<String, Object>> listarAbonosPorDni(String dni) {
+        return ftJdbc.queryForList("""
+                SELECT a.ID AS id,
+                       a.SoliNum AS soliNum,
+                       a.service_concept_id AS conceptoId,
+                       sc.description AS concepto,
+                       a.dues AS cuotas,
+                       a.monthly AS montoMensual,
+                       a.paymentDate AS fechaPago,
+                       a.status AS estado,
+                       a.discount_from AS descuentoDe,
+                       a.createdAt AS creadoEn,
+                       a.lote_id AS loteId
+                  FROM abono a
+                  JOIN employees e ON e.employee_id = a.Employee_id
+                  LEFT JOIN service_concept sc ON sc.ID = a.service_concept_id
+                 WHERE e.national_id = :dni
+                 ORDER BY a.ID DESC
+                """, new MapSqlParameterSource("dni", dni));
+    }
+
+    /** Ultimos vouchers de pago registrados (constancias de entrega). */
+    public List<Map<String, Object>> listarVouchers(int limite) {
+        return ftJdbc.queryForList("""
+                SELECT id,
+                       num_voucher AS numVoucher,
+                       num_account AS numCuenta,
+                       num_check AS numCheque,
+                       bank AS banco,
+                       date_entry AS fecha,
+                       amount AS monto,
+                       details AS detalle,
+                       document_dni AS dni,
+                       name_lastname AS beneficiario
+                  FROM voucher
+                 ORDER BY id DESC
+                 LIMIT :lim
+                """, new MapSqlParameterSource("lim", limite));
+    }
+
+    /** Catalogo de conceptos de servicio (para mapear abonos). */
+    public List<Map<String, Object>> listarConceptos() {
+        return ftJdbc.queryForList("""
+                SELECT ID AS id,
+                       codigo,
+                       description AS descripcion,
+                       sale_price AS precioVenta,
+                       priority_concept AS prioridad
+                  FROM service_concept
+                 ORDER BY ID
+                """, new MapSqlParameterSource());
     }
 
     // ─── Health check ──────────────────────────────────────────────────
