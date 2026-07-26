@@ -127,10 +127,12 @@ public class FtPrestamosController {
         return ApiResponse.ok(repo().resumenPorSoli(soliNum));
     }
 
-    /** LoanDao.getLastLoans — ultimos N resumenes. */
+    /** LoanDao.getLastLoans — ultimos N resumenes (offset para scroll infinito). */
     @GetMapping("/prestamos/resumen/ultimos")
-    public ApiResponse<List<Map<String, Object>>> resumenUltimos(@RequestParam int limite) {
-        return ApiResponse.ok(repo().resumenUltimos(limite));
+    public ApiResponse<List<Map<String, Object>>> resumenUltimos(
+            @RequestParam int limite,
+            @RequestParam(defaultValue = "0") int offset) {
+        return ApiResponse.ok(repo().resumenUltimos(limite, Math.max(offset, 0)));
     }
 
     /** LoanDao.getAllLoanss — resumenes por rango DATE(CreatedAt). */

@@ -312,10 +312,10 @@ public class FtAbonosRepository {
                 new MapSqlParameterSource("eid", employeeId)));
     }
 
-    public List<Map<String, Object>> ultimosAbonos(int limite) {
-        String sql = "SELECT " + abonoCols("a") + " FROM abono a ORDER BY a.ID DESC LIMIT :lim";
+    public List<Map<String, Object>> ultimosAbonos(int limite, int offset) {
+        String sql = "SELECT " + abonoCols("a") + " FROM abono a ORDER BY a.ID DESC LIMIT :lim OFFSET :off";
         return normalizar(ftJdbc.queryForList(sql,
-                new MapSqlParameterSource("lim", limite)));
+                new MapSqlParameterSource("lim", limite).addValue("off", offset)));
     }
 
     public List<String> listarSoliNums() {

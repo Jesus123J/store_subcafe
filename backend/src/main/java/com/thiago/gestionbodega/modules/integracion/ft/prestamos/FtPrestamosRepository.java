@@ -165,11 +165,11 @@ public class FtPrestamosRepository {
                 new MapSqlParameterSource("soli", soliNum)));
     }
 
-    /** LoanDao.getLastLoans: ultimos N sin filtro de fecha. */
-    public List<Map<String, Object>> resumenUltimos(int limite) {
-        String sql = RESUMEN_SELECT + "ORDER BY l.ID DESC LIMIT :lim";
+    /** LoanDao.getLastLoans: ultimos N sin filtro de fecha (con offset para scroll). */
+    public List<Map<String, Object>> resumenUltimos(int limite, int offset) {
+        String sql = RESUMEN_SELECT + "ORDER BY l.ID DESC LIMIT :lim OFFSET :off";
         return normalizar(ftJdbc.queryForList(sql,
-                new MapSqlParameterSource("lim", limite)));
+                new MapSqlParameterSource("lim", limite).addValue("off", offset)));
     }
 
     /** LoanDao.getAllLoanss: resumen con DATE(l.CreatedAt) BETWEEN. */

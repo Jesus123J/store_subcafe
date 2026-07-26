@@ -119,12 +119,12 @@ public class FtEmpleadosRepository {
                         .addValue("fin", fin.toString()));
     }
 
-    /** EmployeeDao.getLastEmployees(): ultimos N por employee_id DESC. */
-    public List<Map<String, Object>> listarUltimos(int limite) {
+    /** EmployeeDao.getLastEmployees(): ultimos N por employee_id DESC (con offset). */
+    public List<Map<String, Object>> listarUltimos(int limite, int offset) {
         return ftJdbc.queryForList(
                 SELECT_FULL + " WHERE " + EXCLUIR_SUPER_ADMIN
-                        + " ORDER BY e.employee_id DESC LIMIT :lim",
-                new MapSqlParameterSource("lim", limite));
+                        + " ORDER BY e.employee_id DESC LIMIT :lim OFFSET :off",
+                new MapSqlParameterSource("lim", limite).addValue("off", offset));
     }
 
     /**

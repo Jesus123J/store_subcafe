@@ -89,11 +89,13 @@ public class FtEmpleadosController {
                 LocalDate.parse(inicio), LocalDate.parse(fin)));
     }
 
-    /** EmployeeDao.getLastEmployees(). */
+    /** EmployeeDao.getLastEmployees() — offset para scroll infinito. */
     @GetMapping("/empleados-full/ultimos")
     public ApiResponse<List<Map<String, Object>>> ultimos(
-            @RequestParam(defaultValue = "10") int limite) {
-        return ApiResponse.ok(repo().listarUltimos(Math.min(Math.max(limite, 1), 500)));
+            @RequestParam(defaultValue = "10") int limite,
+            @RequestParam(defaultValue = "0") int offset) {
+        return ApiResponse.ok(repo().listarUltimos(
+                Math.min(Math.max(limite, 1), 500), Math.max(offset, 0)));
     }
 
     /** EmployeeDao.getAllEmployeeDniNames(): pares {dni, nombre}. */

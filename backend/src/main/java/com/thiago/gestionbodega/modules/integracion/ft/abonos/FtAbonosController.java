@@ -151,11 +151,12 @@ public class FtAbonosController {
         return ApiResponse.ok(repo().abonosPorRango(inicio, fin));
     }
 
-    /** AbonoDao.getLastAbonos(int) */
+    /** AbonoDao.getLastAbonos(int) — offset para scroll infinito. */
     @GetMapping("/abonos/ultimos")
     public ApiResponse<List<Map<String, Object>>> ultimos(
-            @RequestParam(defaultValue = "10") int limite) {
-        return ApiResponse.ok(repo().ultimosAbonos(limite));
+            @RequestParam(defaultValue = "10") int limite,
+            @RequestParam(defaultValue = "0") int offset) {
+        return ApiResponse.ok(repo().ultimosAbonos(limite, Math.max(offset, 0)));
     }
 
     /** AbonoDao.getAllSoliNums() */
