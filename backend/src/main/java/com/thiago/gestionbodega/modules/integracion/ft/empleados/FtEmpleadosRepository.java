@@ -316,6 +316,14 @@ public class FtEmpleadosRepository {
         return states.isEmpty() ? Optional.empty() : Optional.ofNullable(states.get(0));
     }
 
+    /** Rol del usuario (para proteger las cuentas de administrador). */
+    public Optional<String> rolUsuario(String username) {
+        List<String> roles = ftJdbc.queryForList(
+                "SELECT rol FROM user WHERE username = :u",
+                new MapSqlParameterSource("u", username), String.class);
+        return roles.isEmpty() ? Optional.ofNullable(null) : Optional.ofNullable(roles.get(0));
+    }
+
     /** UserDao.toggleUserState() paso 2: UPDATE del state. */
     public boolean actualizarEstadoUsuario(String username, int nuevoEstado) {
         return ftJdbc.update(

@@ -299,6 +299,15 @@ public class FtEmpleadosController {
             return ApiResponse.ok(data);
         }
 
+        // Proteccion adicional: las cuentas con rol de administrador no se
+        // pueden bloquear/editar (mismo criterio que la UI del escritorio).
+        String rol = repo.rolUsuario(username).orElse("");
+        if (rol.toUpperCase().contains("ADMINISTRADOR")) {
+            data.put("cambiado", false);
+            data.put("motivo", "ADMINISTRADOR");
+            return ApiResponse.ok(data);
+        }
+
         int nuevoEstado = (estado == 1) ? 0 : 1; // mismo toggle del original
         boolean cambiado = repo.actualizarEstadoUsuario(username, nuevoEstado);
         data.put("cambiado", cambiado);
