@@ -1,41 +1,6 @@
 # Manual del proceso: venta a crédito a un trabajador y su reflejo en FinantialTracker
 
-Sistema **Sub Café** (tienda del Hospital San José) + **FinantialTracker** (préstamos y planilla).
-Ambos usan **la misma base de datos MySQL** (`financialtracker1`). La tienda registra la venta y la deuda;
-FinantialTracker la ve al instante en su menú **DEUDAS TIENDA**.
-
-Fecha de las capturas: 27/09/2026. Todas las pantallas son reales, tomadas con datos de prueba.
-
----
-
-## 1. Cómo funciona la unión
-
-```
-Tienda (Flutter)  →  Backend Spring Boot  →  MySQL financialtracker1  ←  FinantialTracker (Java)
-   POS / Deudores       http://localhost:8080/api        clientes, ventas,           menú DEUDAS TIENDA
-                                                         creditos_trabajadores       (solo lectura, vía API)
-```
-
-| Quién compra | Cómo paga | Qué pasa |
-|---|---|---|
-| Cliente externo | Efectivo, Yape, Plin o Niubiz | Solo se registra la venta. |
-| Trabajador del hospital | **Crédito a trabajador** | Se registra la venta **y** una deuda a su nombre. Aparece en Deudores y en FinantialTracker. |
-| Trabajador del hospital | Al contado, identificándose | Se registra la venta y **suma puntos**. |
-
-El padrón de trabajadores viene de FinantialTracker (tabla `employees`) y se sincroniza a la tienda con un botón.
-
----
-
-## 2. Antes de empezar
-
-1. **Base de datos** (contenedor Docker `mysql-proyectos`):
-   `cd ~/Desktop/me/mysql-db && docker compose up -d`
-2. **Backend de la tienda**:
-   `cd ~/Desktop/me/store_subcafe/backend && ./run.sh` (Windows: `run.cmd`). Listo cuando aparece `Started GestionBodegaApplication`.
-3. **App de la tienda** (Flutter): `flutter run -d windows` o `flutter run -d chrome`.
-4. **FinantialTracker** (Java): abrir desde NetBeans o el `.exe`. Necesita el backend de la tienda encendido para el menú DEUDAS TIENDA.
-
-Usuarios de la tienda (los del seed; cambiarlos en producción):
+## Usuarios de la tienda
 
 | Usuario | Contraseña | Rol |
 |---|---|---|
@@ -45,7 +10,7 @@ Usuarios de la tienda (los del seed; cambiarlos en producción):
 
 ---
 
-## 3. Paso a paso
+## 1. Paso a paso
 
 ### Paso 1 · Entrar a la tienda
 
@@ -213,7 +178,7 @@ Esta ventana es de **solo lectura**: FinantialTracker consume la API de la tiend
 
 ---
 
-## 4. Los demás registros de la tienda
+## 2. Los demás registros de la tienda
 
 | Pantalla | Qué se registra | Captura |
 |---|---|---|
@@ -229,7 +194,7 @@ Esta ventana es de **solo lectura**: FinantialTracker consume la API de la tiend
 
 ---
 
-## 5. Resumen del recorrido de una deuda
+## 3. Resumen del recorrido de una deuda
 
 1. El trabajador compra en el POS y paga con **Crédito a trabajador** → `ventas` + `creditos_trabajadores`.
 2. Aparece en **Deudores** (tienda) y en **DEUDAS TIENDA** (FinantialTracker) en menos de 10 segundos.
