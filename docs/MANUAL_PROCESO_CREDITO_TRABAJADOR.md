@@ -181,9 +181,9 @@ Si el pago es CRÉDITO y no se elige trabajador, el sistema no deja continuar. P
 1. Ciclo actual y fecha del próximo cierre.
 2. Créditos del mes por trabajador (lo que se trasladará a deuda al cerrar).
 3. **Cerrar mes** (solo administrador o encargado). Al cerrar:
-   - se suma lo pendiente por trabajador y pasa a **deuda acumulada**;
-   - se guarda un detalle del cierre por trabajador (`cierre_creditos_detalle`), que es lo que irá a planilla;
-   - el envío del descuento a FinantialTracker (crear el `abono` con el concepto **DESCUENTOS CREDITO BAZAR**) está programado pero **desactivado**. Se activa con la clave `finantial.exportar_al_cerrar = true` en Configuración cuando se decida unir el descuento.
+    - se suma lo pendiente por trabajador y pasa a **deuda acumulada**;
+    - se guarda un detalle del cierre por trabajador (`cierre_creditos_detalle`), que es lo que irá a planilla;
+    - el envío del descuento a FinantialTracker (crear el `abono` con el concepto **DESCUENTOS CREDITO BAZAR**) está programado pero **desactivado**. Se activa con la clave `finantial.exportar_al_cerrar = true` en Configuración cuando se decida unir el descuento.
 
 ### Paso 7 · Verlo en FinantialTracker
 
