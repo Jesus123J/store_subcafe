@@ -74,7 +74,8 @@ class AppComingSoon extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.circle, size: 6, color: AppColors.primary),
+                                const Icon(Icons.circle,
+                                    size: 6, color: AppColors.primary),
                                 const SizedBox(width: 10),
                                 Expanded(child: Text(f)),
                               ],

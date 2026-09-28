@@ -8,9 +8,9 @@ Guía paso a paso para probar el sistema completo en tu PC. Si Flutter dice "No 
 
 | Software | Versión | Estado |
 |----------|---------|--------|
-| PostgreSQL | 16+ | Ya instalado |
-| Java | 17+ | Ya instalado (tienes Java 22) |
-| Maven | 3.9+ | Ya instalado |
+| Docker (MySQL 8 en contenedor `mysql-proyectos`) | — | Carpeta `~/Desktop/me/mysql-db` |
+| Java | 17+ (JDK 17 o 21) | Ya instalado |
+| Maven | — | No hace falta: el backend trae `mvnw` |
 | Flutter | 3.40+ | Ya instalado (3.41.9) |
 | Visual Studio C++ workload | 2022 o 2026 | Ya instalado |
 
@@ -21,7 +21,7 @@ Guía paso a paso para probar el sistema completo en tu PC. Si Flutter dice "No 
 Hay que arrancar **3 cosas en este orden**:
 
 ```
-   1. PostgreSQL        (servidor de BD)
+   1. MySQL (Docker)    (servidor de BD, el mismo de FinantialTracker)
         ↓
    2. Backend Spring    (API en http://localhost:8080)
         ↓
@@ -32,20 +32,19 @@ Si saltas el paso 2, Flutter no se puede conectar y verás el error de la captur
 
 ---
 
-## ✅ Paso 1 — Verificar PostgreSQL (10 segundos)
+## ✅ Paso 1 — Encender MySQL (10 segundos)
 
-PostgreSQL ya está instalado como servicio de Windows, así que **debería estar corriendo solo**. Verifica:
+La base de datos es **la misma que usa FinantialTracker** (`financialtracker1`), en el contenedor Docker `mysql-proyectos`:
 
-```powershell
-Get-Service "postgresql*"
+```bash
+cd ~/Desktop/me/mysql-db
+docker compose up -d
+docker ps          # debe aparecer mysql-proyectos ... Up
 ```
 
-Si dice **`Running`** → ✅ todo bien, salta al Paso 2.
+Datos de conexión: `localhost:3306`, usuario `root`, clave `123456`, base `financialtracker1`.
 
-Si dice **`Stopped`** → arráncalo:
-```powershell
-Start-Service "postgresql-x64-16"
-```
+Si ya estaba encendido → ✅ salta al Paso 2.
 
 ---
 
@@ -54,9 +53,12 @@ Start-Service "postgresql-x64-16"
 Abre una **terminal nueva** (Git Bash o PowerShell):
 
 ```bash
-cd "c:/Users/Jesus Gutierrez/Documents/Proyeto_2026/backend"
-mvn spring-boot:run
+cd backend
+./run.sh        # macOS / Linux
+run.cmd         # Windows
 ```
+
+(`run.sh` elige solo un JDK 17/21 y ejecuta `./mvnw spring-boot:run`; no necesitas Maven instalado.)
 
 ⏳ La primera vez tarda ~1 minuto. Las siguientes, ~25 segundos.
 
@@ -84,8 +86,7 @@ Si ves la interfaz de Swagger con la lista de endpoints → ✅ backend OK.
 Abre **OTRA terminal** (deja la del backend abierta):
 
 ```bash
-cd "c:/Users/Jesus Gutierrez/Documents/Proyeto_2026"
-flutter run -d windows
+flutter run -d windows     # o -d macos
 ```
 
 ⏳ Tarda ~30 segundos en compilar y abrir la ventana.
@@ -134,26 +135,19 @@ En la terminal donde está Flutter:
 **Solución:** abrir Visual Studio Installer → Modificar → marcar "Desktop development with C++".
 
 ### "Migration checksum mismatch for migration version X"
-**Causa:** alguien (yo mismo) modificó un archivo de migración SQL después de que ya fue aplicado en BD.
-**Solución:** desde la versión actual ya está cubierto — `application.yml` tiene `repair-on-migrate: true`, que actualiza los checksums automáticamente al arrancar.
-
-Si llega a fallar igual:
-```powershell
-# Pull último código y reintentar
-git pull
-mvn spring-boot:run
-```
+**Causa:** alguien modificó un archivo de migración SQL después de que ya fue aplicado en BD.
+**Solución:** ya está cubierto — `FlywayConfig` ejecuta `repair()` al arrancar y actualiza los checksums automáticamente.
 
 Si persiste, manual:
-```powershell
-& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U bodega_user -d gestion_bodega -c "DELETE FROM flyway_schema_history WHERE success = false;"
+```bash
+docker exec -it mysql-proyectos mysql -uroot -p123456 financialtracker1 -e "DELETE FROM flyway_schema_history WHERE success = 0;"
 ```
 
-### "Could not connect to PostgreSQL"
-**Causa:** el servicio de Postgres está detenido.
+### "Communications link failure" / "Connection refused"
+**Causa:** el contenedor MySQL está apagado.
 **Solución:**
-```powershell
-Start-Service "postgresql-x64-16"
+```bash
+cd ~/Desktop/me/mysql-db && docker compose up -d
 ```
 
 ### El error "letra no se ve" que viste en Proveedores
@@ -165,21 +159,20 @@ Start-Service "postgresql-x64-16"
 
 ---
 
-## 🛠️ Comandos útiles de PostgreSQL
+## 🛠️ Comandos útiles de MySQL
 
-```powershell
-# Conectarte a la BD
-& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U bodega_user -d gestion_bodega
-# Password: bodega_pass
+```bash
+# Conectarte a la BD (misma de FinantialTracker)
+docker exec -it mysql-proyectos mysql -uroot -p123456 financialtracker1
 
 # Ver tablas
-\dt
+SHOW TABLES;
 
 # Ver usuarios cargados
 SELECT username, rol FROM usuarios;
 
 # Salir
-\q
+EXIT;
 ```
 
 ---
@@ -194,13 +187,12 @@ Si algo se rompe mucho:
 # 2. Detener backend (Ctrl+C en su terminal)
 
 # 3. Limpiar Flutter
-cd "c:/Users/Jesus Gutierrez/Documents/Proyeto_2026"
 flutter clean
 flutter pub get
 
 # 4. Limpiar backend
 cd backend
-mvn clean
+./mvnw clean
 
 # 5. Volver a Paso 2 → Paso 3
 ```
@@ -214,8 +206,8 @@ mvn clean
 │                                                         │
 │   Terminal 1 (Backend)        Terminal 2 (Flutter)      │
 │   ─────────────────────       ─────────────────────     │
-│   cd backend                  cd Proyeto_2026           │
-│   mvn spring-boot:run         flutter run -d windows    │
+│   cd backend                  (raíz del proyecto)       │
+│   ./run.sh                    flutter run -d windows    │
 │                                                         │
 │   ⏳ Esperar Started...        ⏳ Esperar ventana...      │
 │                                                         │

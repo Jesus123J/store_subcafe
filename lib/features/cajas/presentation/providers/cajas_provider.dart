@@ -29,7 +29,7 @@ class CajasController {
   final Ref _ref;
 
   Future<void> abrir({
-    required String turno,         // 'DIA' o 'NOCHE'
+    required String turno, // 'DIA' o 'NOCHE'
     required double montoApertura,
     int? contometroInicio,
   }) async {

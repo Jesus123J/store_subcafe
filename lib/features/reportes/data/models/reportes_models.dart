@@ -35,8 +35,7 @@ class VentasDiariasReporte {
       totalGeneral: (j['totalGeneral'] as num).toDouble(),
       cantidadTransacciones: (j['cantidadTransacciones'] as num).toInt(),
       ticketPromedio: (j['ticketPromedio'] as num).toDouble(),
-      porFormaPago:
-          formas.map((k, v) => MapEntry(k, (v as num).toDouble())),
+      porFormaPago: formas.map((k, v) => MapEntry(k, (v as num).toDouble())),
       porTurno: turnos.map((k, v) => MapEntry(k, (v as num).toDouble())),
       serieDiaria: (j['serieDiaria'] as List<dynamic>)
           .map((e) => SerieDiariaPunto.fromJson(e as Map<String, dynamic>))

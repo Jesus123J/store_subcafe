@@ -13,7 +13,7 @@ Este proyecto usa una combinación de dos patrones probados en producción:
 |-----------|-------------|
 | 🧱 **Mantenible** | Cada feature vive aislada — tocar "Ventas" no rompe "Reportes" |
 | 🧪 **Testeable** | El dominio no depende de Flutter ni de la BD — se testea con Dart puro |
-| 🔄 **Reemplazable** | Cambiar PostgreSQL por otra BD solo afecta la capa Data |
+| 🔄 **Reemplazable** | Cambiar de motor de BD (hoy MySQL) solo afecta al backend, no al front |
 | 📈 **Escalable** | Agregar un módulo nuevo = crear una carpeta en `features/` |
 | 👥 **Colaborable** | Múltiples desarrolladores pueden trabajar en features distintas sin pisarse |
 
@@ -38,7 +38,7 @@ Este proyecto usa una combinación de dos patrones probados en producción:
 ├─────────────────────────────────────────────────────┤
 │  DATA (Acceso a datos)                              │
 │  └─ Models (DTOs), DataSources, Repository impls    │
-│  └─ Aquí vive PostgreSQL                            │
+│  └─ Aquí se consume la API REST del backend        │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -51,7 +51,7 @@ Este proyecto usa una combinación de dos patrones probados en producción:
 
 ### Capa **Data**
 - **Models**: extienden de las Entities, agregan `fromMap()`, `toMap()`, `fromJson()`.
-- **DataSources**: acceso bruto a PostgreSQL (queries SQL).
+- **DataSources**: llamadas HTTP al backend Spring Boot (Dio).
 - **Repository implementations**: implementan las interfaces de Domain usando los DataSources.
 
 ### Capa **Presentation**
@@ -100,8 +100,8 @@ features/ventas/
 | UI Framework | **Flutter Desktop (Windows)** | Multiplataforma, moderno, rápido |
 | Estado | **Riverpod 2** | Type-safe, sin BuildContext, fácil de testear |
 | Navegación | **GoRouter** | Declarativo, soporta deep links, oficial de Flutter |
-| Base de datos | **PostgreSQL** | Soporta múltiples clientes concurrentes (LAN) |
-| Driver BD | **`postgres` package** | Cliente nativo Dart para PostgreSQL |
+| Base de datos | **MySQL 8** (compartida con FinantialTracker) | Una sola BD para toda la tienda; la usa el backend, no el front |
+| HTTP | **`dio`** | El front consume la API REST (`http://localhost:8080/api`) |
 | Modelos | **Freezed + JsonSerializable** | Inmutables, generación automática |
 | Inyección | **Riverpod Providers** | No necesitamos GetIt/Injectable |
 | Manejo errores | **`dartz` (Either)** | Programación funcional, errores explícitos |
@@ -145,7 +145,7 @@ lib/
 │
 ├── data/                             # Capa de datos compartida
 │   ├── database/
-│   │   ├── postgres_connection.dart  # Singleton conexión PostgreSQL
+│   │   ├── api_client.dart           # Singleton HTTP (Dio) hacia el backend
 │   │   └── migrations/
 │   │       └── 001_initial_schema.sql
 │   └── local/
@@ -206,7 +206,7 @@ lib/
                 ↓
 5. AuthRepositoryImpl ejecuta la lógica           ← implementación (Data)
                 ↓
-6. AuthDataSource hace SELECT en PostgreSQL
+6. AuthDataSource llama a POST /api/auth/login (el backend consulta MySQL)
                 ↓
 7. Retorna User model → User entity → UseCase → Notifier → UI
 ```

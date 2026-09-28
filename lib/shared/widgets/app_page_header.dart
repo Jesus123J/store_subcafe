@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_text_styles.dart';
 
 class AppPageHeader extends StatelessWidget {
   const AppPageHeader({
@@ -28,14 +29,7 @@ class AppPageHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
+                Text(title, style: AppTextStyles.display(size: 24)),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
                   Text(

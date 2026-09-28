@@ -15,12 +15,15 @@
     <artifactId>gestion-bodega-backend</artifactId>
     <version>1.0.0</version>
     <name>gestion-bodega-backend</name>
-    <description>API REST para sistema de gestion de bodega</description>
+    <description>API REST para sistema de gestion de bodega (Spring Boot + MySQL)</description>
 
     <properties>
         <java.version>17</java.version>
         <jjwt.version>0.12.6</jjwt.version>
         <springdoc.version>2.6.0</springdoc.version>
+        <!-- Spring Boot 3.3 trae Flyway 10.10; se usa 10.20 (mas reciente). Con MySQL 8.4 Flyway
+             solo muestra un WARN "upgrade recommended"; las migraciones corren sin problema. -->
+        <flyway.version>10.20.1</flyway.version>
     </properties>
 
     <dependencies>
@@ -48,10 +51,10 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- PostgreSQL driver -->
+        <!-- MySQL driver (misma BD que FinantialTracker) -->
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -62,7 +65,7 @@
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-database-postgresql</artifactId>
+            <artifactId>flyway-mysql</artifactId>
         </dependency>
 
         <!-- Lombok (menos boilerplate) -->

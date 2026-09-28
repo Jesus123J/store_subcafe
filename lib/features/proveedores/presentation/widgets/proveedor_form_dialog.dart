@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
+import '../../../../core/api/api_exception.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/validators.dart';
+import '../../data/models/proveedor_model.dart';
 
+/// Alta y edición de proveedor contra el backend (POST/PUT /proveedores).
+/// Devuelve el [ProveedorModel] guardado, o null si se canceló.
 class ProveedorFormDialog extends StatefulWidget {
-  const ProveedorFormDialog({super.key});
+  const ProveedorFormDialog({this.proveedor, super.key});
+
+  final ProveedorModel? proveedor;
+  bool get esEdicion => proveedor != null;
 
   @override
   State<ProveedorFormDialog> createState() => _ProveedorFormDialogState();
@@ -13,10 +23,23 @@ class ProveedorFormDialog extends StatefulWidget {
 
 class _ProveedorFormDialogState extends State<ProveedorFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _razonSocial = TextEditingController();
-  final _ruc = TextEditingController();
-  final _direccion = TextEditingController();
-  final _telefono = TextEditingController();
+  late final TextEditingController _razonSocial;
+  late final TextEditingController _ruc;
+  late final TextEditingController _direccion;
+  late final TextEditingController _telefono;
+  late bool _activo;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.proveedor;
+    _razonSocial = TextEditingController(text: p?.razonSocial ?? '');
+    _ruc = TextEditingController(text: p?.ruc ?? '');
+    _direccion = TextEditingController(text: p?.direccion ?? '');
+    _telefono = TextEditingController(text: p?.telefono ?? '');
+    _activo = p?.activo ?? true;
+  }
 
   @override
   void dispose() {
@@ -27,9 +50,34 @@ class _ProveedorFormDialogState extends State<ProveedorFormDialog> {
     super.dispose();
   }
 
-  void _guardar() {
+  Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.pop(context, true);
+    setState(() => _guardando = true);
+    final body = {
+      'razonSocial': _razonSocial.text.trim(),
+      'ruc': _ruc.text.trim(),
+      'direccion':
+          _direccion.text.trim().isEmpty ? null : _direccion.text.trim(),
+      'telefono': _telefono.text.trim().isEmpty ? null : _telefono.text.trim(),
+      'activo': _activo,
+    };
+    try {
+      final json = widget.esEdicion
+          ? await ApiClient.instance.putData<Map<String, dynamic>>(
+              ApiEndpoints.proveedorById(widget.proveedor!.id),
+              body: body,
+            )
+          : await ApiClient.instance.postData<Map<String, dynamic>>(
+              ApiEndpoints.proveedores,
+              body: body,
+            );
+      if (!mounted) return;
+      Navigator.pop(context, ProveedorModel.fromJson(json));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      context.showSnack(e is ApiException ? e.message : '$e', isError: true);
+    }
   }
 
   @override
@@ -48,26 +96,29 @@ class _ProveedorFormDialogState extends State<ProveedorFormDialog> {
                 children: [
                   const Icon(Icons.local_shipping, color: AppColors.primary),
                   const SizedBox(width: 8),
-                  Text('Nuevo proveedor', style: context.textTheme.titleLarge),
+                  Text(
+                      widget.esEdicion ? 'Editar proveedor' : 'Nuevo proveedor',
+                      style: context.textTheme.titleLarge),
                 ],
               ),
               const SizedBox(height: 20),
               TextFormField(
                 controller: _razonSocial,
-                style: const TextStyle(color: AppColors.textPrimary),
+                autofocus: !widget.esEdicion,
                 decoration: const InputDecoration(
-                  labelText: 'Razón Social *',
+                  labelText: 'Razón social *',
                   hintText: 'Ej: Distribuidora La Bodega SAC',
                   prefixIcon: Icon(Icons.business),
                 ),
-                validator: (v) => Validators.required(v, fieldName: 'Razón Social'),
+                validator: (v) =>
+                    Validators.required(v, fieldName: 'Razón social'),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _ruc,
-                style: const TextStyle(color: AppColors.textPrimary),
                 keyboardType: TextInputType.number,
                 maxLength: 11,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
                   labelText: 'RUC *',
                   hintText: '11 dígitos',
@@ -79,7 +130,6 @@ class _ProveedorFormDialogState extends State<ProveedorFormDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _direccion,
-                style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   labelText: 'Dirección',
                   hintText: 'Av. / Jr. / Calle',
@@ -89,47 +139,46 @@ class _ProveedorFormDialogState extends State<ProveedorFormDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _telefono,
-                style: const TextStyle(color: AppColors.textPrimary),
                 keyboardType: TextInputType.phone,
+                maxLength: 20,
                 decoration: const InputDecoration(
                   labelText: 'Teléfono',
                   hintText: '9 dígitos',
                   prefixIcon: Icon(Icons.phone),
+                  counterText: '',
                 ),
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.info.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
+              if (widget.esEdicion) ...[
+                const SizedBox(height: 4),
+                SwitchListTile(
+                  value: _activo,
+                  onChanged: (v) => setState(() => _activo = v),
+                  title: const Text('Activo (se le pueden registrar compras)',
+                      style: TextStyle(color: AppColors.textPrimary)),
+                  contentPadding: EdgeInsets.zero,
                 ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: AppColors.info, size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Demo: el backend aún no tiene POST /proveedores.',
-                        style: TextStyle(fontSize: 11, color: AppColors.info),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _guardando ? null : () => Navigator.pop(context),
                     child: const Text('Cancelar'),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.icon(
-                    onPressed: _guardar,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Guardar'),
+                    onPressed: _guardando ? null : _guardar,
+                    icon: _guardando
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.save),
+                    label: Text(widget.esEdicion
+                        ? 'Guardar cambios'
+                        : 'Crear proveedor'),
                   ),
                 ],
               ),

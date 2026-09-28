@@ -54,7 +54,8 @@ class CreditosPage extends ConsumerWidget {
         children: [
           AppPageHeader(
             title: 'Créditos a Trabajadores',
-            subtitle: 'Ciclo mensual: consume el mes → cierra → descuenta de planilla el mes siguiente',
+            subtitle:
+                'Ciclo mensual: consume el mes → cierra → descuenta de planilla el mes siguiente',
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh, color: AppColors.primary),
@@ -197,7 +198,8 @@ class CreditosPage extends ConsumerWidget {
       ref.invalidate(cierresHistorialProvider);
       context.showSnack(
         'Mes cerrado: ${res['trabajadoresAfectados']} trabajador(es) afectado(s), '
-        '${CurrencyFormatter.format((res['montoTotal'] as num).toDouble())} migrados a deuda',
+        '${CurrencyFormatter.format((res['montoTotal'] as num).toDouble())} migrados a deuda. '
+        'Revise el detalle en la pestaña Deudores.',
       );
     } catch (e) {
       if (context.mounted) context.showSnack('Error: $e', isError: true);
@@ -205,8 +207,19 @@ class CreditosPage extends ConsumerWidget {
   }
 
   String _nombreMes(int m) => const [
-        '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre',
+        '',
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Setiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre',
       ][m];
 }
 
@@ -319,7 +332,7 @@ class _SeccionMes extends ConsumerWidget {
                         ),
                       ),
                       subtitle: Text(
-                        '@${r['username']} · ${r['cantidad_consumos']} consumo(s)',
+                        'DNI ${r['dni']} · ${r['cantidad_consumos']} consumo(s)',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
@@ -384,7 +397,8 @@ class _SeccionDeuda extends ConsumerWidget {
             dataBuilder: (lista) {
               if (lista.isEmpty) {
                 return const AppEmptyState(
-                  message: 'Ningún trabajador tiene deuda acumulada.\nSe genera al cerrar meses con créditos pendientes.',
+                  message:
+                      'Ningún trabajador tiene deuda acumulada.\nSe genera al cerrar meses con créditos pendientes.',
                   icon: Icons.account_balance_outlined,
                 );
               }
@@ -442,7 +456,7 @@ class _SeccionDeuda extends ConsumerWidget {
                         ),
                       ),
                       subtitle: Text(
-                        '@${r['username']}',
+                        'DNI ${r['dni']}',
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 12,
@@ -530,7 +544,9 @@ class _SeccionHistorial extends ConsumerWidget {
                     ),
                     subtitle: Text(
                       'Cerrado el ${AppDateUtils.formatDate(DateTime.parse(r['fecha_cierre'] as String))}'
-                      ' · ${r['trabajadores_afectados']} trabajador(es)',
+                      ' · ${r['trabajadores_afectados']} trabajador(es)'
+                      ' · FinantialTracker: ${r['exportados_finantial'] ?? 0} enviado(s), '
+                      '${r['pendientes_finantial'] ?? 0} solo en tienda',
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -558,8 +574,19 @@ class _SeccionHistorial extends ConsumerWidget {
 
   String _mesAnio(int m, int a) {
     final nombre = const [
-      '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre',
+      '',
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Setiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
     ][m];
     return '$nombre $a';
   }

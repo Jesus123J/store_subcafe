@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/widgets/trabajador_picker.dart';
 
 /// Forma de pago aceptada en el POS.
 enum FormaPago {
@@ -18,6 +19,12 @@ enum FormaPago {
   final Color color;
 
   bool get requiereCodigo => this == FormaPago.yape || this == FormaPago.plin;
+
+  /// Crédito: obligatorio elegir al trabajador que asume la deuda.
+  bool get requiereTrabajador => this == FormaPago.credito;
+
+  /// Valor que espera el backend (enum FormaPago de Spring).
+  String get apiValue => name.toUpperCase();
 }
 
 /// Un pago parcial: forma de pago + monto + (opcional) código de operación.
@@ -26,11 +33,24 @@ class PagoParcial {
     required this.formaPago,
     required this.monto,
     this.codigoOperacion,
+    this.clienteId,
+    this.clienteNombre,
   });
 
   final FormaPago formaPago;
   final double monto;
   final String? codigoOperacion;
+
+  /// Solo para CREDITO: trabajador (clientes.id) que asume la deuda.
+  final String? clienteId;
+  final String? clienteNombre;
+
+  Map<String, dynamic> toJson() => {
+        'formaPago': formaPago.apiValue,
+        'monto': double.parse(monto.toStringAsFixed(2)),
+        if (codigoOperacion != null) 'codigoOperacion': codigoOperacion,
+        if (clienteId != null) 'clienteId': clienteId,
+      };
 }
 
 /// Diálogo que permite al vendedor distribuir el total entre N formas de pago.
@@ -94,7 +114,8 @@ class _MultiplePagosDialogState extends State<MultiplePagosDialog> {
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(20),
@@ -133,16 +154,19 @@ class _MultiplePagosDialogState extends State<MultiplePagosDialog> {
                 decoration: BoxDecoration(
                   color: AppColors.background,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border, style: BorderStyle.solid),
+                  border: Border.all(
+                      color: AppColors.border, style: BorderStyle.solid),
                 ),
                 child: const Column(
                   children: [
-                    Icon(Icons.add_card, color: AppColors.textSecondary, size: 36),
+                    Icon(Icons.add_card,
+                        color: AppColors.textSecondary, size: 36),
                     SizedBox(height: 8),
                     Text(
                       'Aún no hay pagos agregados.\nUse el botón de abajo para agregar el primero.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      style: TextStyle(
+                          color: AppColors.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
@@ -190,7 +214,8 @@ class _MultiplePagosDialogState extends State<MultiplePagosDialog> {
                   label: const Text('Confirmar venta'),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.secondary,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
                   ),
                 ),
               ],
@@ -235,7 +260,8 @@ class _ResumenPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: estadoColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: estadoColor.withValues(alpha: 0.4), width: 1.5),
+        border:
+            Border.all(color: estadoColor.withValues(alpha: 0.4), width: 1.5),
       ),
       child: Row(
         children: [
@@ -244,7 +270,8 @@ class _ResumenPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Pagado',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 11)),
                 Text(
                   CurrencyFormatter.format(pagado),
                   style: const TextStyle(
@@ -261,8 +288,8 @@ class _ResumenPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(excede ? 'Sobra' : 'Falta',
-                    style:
-                        const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 11)),
                 Text(
                   CurrencyFormatter.format(falta.abs()),
                   style: TextStyle(
@@ -319,7 +346,8 @@ class _PagoTile extends StatelessWidget {
               color: pago.formaPago.color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(pago.formaPago.icon, color: pago.formaPago.color, size: 18),
+            child: Icon(pago.formaPago.icon,
+                color: pago.formaPago.color, size: 18),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -333,6 +361,15 @@ class _PagoTile extends StatelessWidget {
                     color: AppColors.textPrimary,
                   ),
                 ),
+                if (pago.clienteNombre != null)
+                  Text(
+                    'Deuda de: ${pago.clienteNombre}',
+                    style: const TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 if (pago.codigoOperacion != null)
                   Text(
                     'Cód. operación: ${pago.codigoOperacion}',
@@ -380,11 +417,13 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
   late final TextEditingController _montoCtrl;
   final _codigoCtrl = TextEditingController();
   FormaPago _forma = FormaPago.efectivo;
+  TrabajadorSeleccionado? _trabajador; // seleccionado para CREDITO
 
   @override
   void initState() {
     super.initState();
-    _montoCtrl = TextEditingController(text: widget.montoSugerido.toStringAsFixed(2));
+    _montoCtrl =
+        TextEditingController(text: widget.montoSugerido.toStringAsFixed(2));
   }
 
   @override
@@ -398,12 +437,22 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
     if (!_formKey.currentState!.validate()) return;
     final monto = double.tryParse(_montoCtrl.text) ?? 0;
     if (monto <= 0) return;
+    if (_forma.requiereTrabajador && _trabajador == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'Crédito solo para trabajadores: busca y elige quién asume la deuda. '
+            'Si es un cliente externo usa otra forma de pago.'),
+      ));
+      return;
+    }
     Navigator.of(context).pop(PagoParcial(
       formaPago: _forma,
       monto: monto,
       codigoOperacion: _forma.requiereCodigo && _codigoCtrl.text.isNotEmpty
           ? _codigoCtrl.text.trim()
           : null,
+      clienteId: _forma.requiereTrabajador ? _trabajador!.id : null,
+      clienteNombre: _forma.requiereTrabajador ? _trabajador!.nombre : null,
     ));
   }
 
@@ -446,18 +495,19 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
                     onTap: () => setState(() => _forma = f),
                     borderRadius: BorderRadius.circular(6),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: activo ? f.color : Colors.white,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: f.color, width: activo ? 0 : 1),
+                        border:
+                            Border.all(color: f.color, width: activo ? 0 : 1),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(f.icon,
-                              size: 14,
-                              color: activo ? Colors.white : f.color),
+                              size: 14, color: activo ? Colors.white : f.color),
                           const SizedBox(width: 4),
                           Text(
                             f.label,
@@ -476,7 +526,8 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _montoCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -496,6 +547,15 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
                   return null;
                 },
               ),
+              if (_forma.requiereTrabajador) ...[
+                const SizedBox(height: 12),
+                TrabajadorPicker(
+                  seleccionado: _trabajador,
+                  autofocus: true,
+                  label: 'Trabajador que asume la deuda (DNI o nombre)',
+                  onChanged: (t) => setState(() => _trabajador = t),
+                ),
+              ],
               if (_forma.requiereCodigo) ...[
                 const SizedBox(height: 12),
                 TextFormField(

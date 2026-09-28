@@ -7,7 +7,8 @@ import '../../../../core/utils/validators.dart';
 
 /// Tipo de comprobante de pago (régimen peruano).
 enum TipoComprobante {
-  ticket('Ticket', 'Sin valor tributario, solo control interno', Icons.receipt_long),
+  ticket('Ticket', 'Sin valor tributario, solo control interno',
+      Icons.receipt_long),
   boleta('Boleta', 'Para consumidor final (DNI opcional)', Icons.receipt),
   factura('Factura', 'Para empresas (requiere RUC)', Icons.description);
 
@@ -27,7 +28,7 @@ class DatosComprobante {
   });
 
   final TipoComprobante tipo;
-  final String? nroDocumento;        // DNI (boleta) o RUC (factura)
+  final String? nroDocumento; // DNI (boleta) o RUC (factura)
   final String? razonSocialNombre;
   final String? direccion;
 
@@ -72,9 +73,13 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
     Navigator.of(context).pop(
       DatosComprobante(
         tipo: _tipo,
-        nroDocumento: _docCtrl.text.trim().isEmpty ? null : _docCtrl.text.trim(),
-        razonSocialNombre: _nombreCtrl.text.trim().isEmpty ? null : _nombreCtrl.text.trim(),
-        direccion: _direccionCtrl.text.trim().isEmpty ? null : _direccionCtrl.text.trim(),
+        nroDocumento:
+            _docCtrl.text.trim().isEmpty ? null : _docCtrl.text.trim(),
+        razonSocialNombre:
+            _nombreCtrl.text.trim().isEmpty ? null : _nombreCtrl.text.trim(),
+        direccion: _direccionCtrl.text.trim().isEmpty
+            ? null
+            : _direccionCtrl.text.trim(),
       ),
     );
   }
@@ -106,7 +111,8 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.shopping_cart, color: Colors.white, size: 28),
+                    const Icon(Icons.shopping_cart,
+                        color: Colors.white, size: 28),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -114,7 +120,8 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                         children: [
                           Text(
                             '${widget.itemsCount} ${widget.itemsCount == 1 ? "item" : "items"}  ·  ${widget.formaPago}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12),
                           ),
                           Text(
                             CurrencyFormatter.format(widget.total),
@@ -161,7 +168,8 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                             color: activo ? AppColors.primary : Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: activo ? AppColors.primary : AppColors.border,
+                              color:
+                                  activo ? AppColors.primary : AppColors.border,
                               width: activo ? 2 : 1,
                             ),
                           ),
@@ -169,7 +177,8 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                             children: [
                               Icon(
                                 t.icon,
-                                color: activo ? Colors.white : AppColors.primary,
+                                color:
+                                    activo ? Colors.white : AppColors.primary,
                                 size: 24,
                               ),
                               const SizedBox(height: 6),
@@ -177,7 +186,9 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                                 t.label,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: activo ? Colors.white : AppColors.textPrimary,
+                                  color: activo
+                                      ? Colors.white
+                                      : AppColors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -213,7 +224,9 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        esFactura ? 'Datos del cliente (empresa)' : 'Datos del cliente',
+                        esFactura
+                            ? 'Datos del cliente (empresa)'
+                            : 'Datos del cliente',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -226,7 +239,9 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                         style: const TextStyle(color: AppColors.textPrimary),
                         keyboardType: TextInputType.number,
                         maxLength: esFactura ? 11 : 8,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
                         decoration: InputDecoration(
                           labelText: esFactura ? 'RUC *' : 'DNI (opcional)',
                           hintText: esFactura ? '11 dígitos' : '8 dígitos',
@@ -244,14 +259,14 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                           labelText: esFactura
                               ? 'Razón Social *'
                               : 'Nombre del cliente (opcional)',
-                          hintText: esFactura
-                              ? 'Ej: Empresa SAC'
-                              : 'Ej: Juan Pérez',
+                          hintText:
+                              esFactura ? 'Ej: Empresa SAC' : 'Ej: Juan Pérez',
                           prefixIcon: const Icon(Icons.person_outline),
                           isDense: true,
                         ),
                         validator: esFactura
-                            ? (v) => Validators.required(v, fieldName: 'Razón Social')
+                            ? (v) => Validators.required(v,
+                                fieldName: 'Razón Social')
                             : null,
                       ),
                       if (esFactura) ...[
@@ -275,7 +290,8 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                   decoration: BoxDecoration(
                     color: AppColors.info.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: AppColors.info.withValues(alpha: 0.3)),
                   ),
                   child: const Row(
                     children: [
@@ -285,7 +301,8 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                         child: Text(
                           'Ticket simple: se registra la venta sin datos del cliente. '
                           'Solo para control interno.',
-                          style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.textPrimary),
                         ),
                       ),
                     ],
@@ -304,10 +321,12 @@ class _FinalizarVentaDialogState extends State<FinalizarVentaDialog> {
                   FilledButton.icon(
                     onPressed: _confirmar,
                     icon: const Icon(Icons.check_circle, size: 18),
-                    label: Text('Confirmar venta · ${CurrencyFormatter.format(widget.total)}'),
+                    label: Text(
+                        'Confirmar venta · ${CurrencyFormatter.format(widget.total)}'),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.secondary,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
                     ),
                   ),
                 ],

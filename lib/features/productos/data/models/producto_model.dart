@@ -11,6 +11,8 @@ class ProductoModel extends Producto {
     required super.activo,
     super.codigo,
     super.esBazar,
+    super.precioVenta,
+    super.costo,
   });
 
   factory ProductoModel.fromJson(Map<String, dynamic> json) {
@@ -24,6 +26,8 @@ class ProductoModel extends Producto {
       usaContometro: json['usaContometro'] as bool? ?? false,
       activo: json['activo'] as bool? ?? true,
       esBazar: json['esBazar'] as bool? ?? false,
+      precioVenta: (json['precioVenta'] as num?)?.toDouble() ?? 0,
+      costo: (json['costo'] as num?)?.toDouble() ?? 0,
     );
   }
 }

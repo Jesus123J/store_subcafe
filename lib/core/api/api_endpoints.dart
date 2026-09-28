@@ -13,9 +13,11 @@ class ApiEndpoints {
 
   // Proveedores
   static const String proveedores = '/proveedores';
+  static String proveedorById(String id) => '/proveedores/$id';
 
   // Productos
   static const String productos = '/productos';
+  static String productoById(String id) => '/productos/$id';
 
   // Ventas
   static const String ventas = '/ventas';
@@ -54,7 +56,29 @@ class ApiEndpoints {
   // Puntos
   static const String puntosSaldos = '/puntos/saldos';
   static const String puntosCanjeables = '/puntos/canjeables';
+  static String puntosCanjeable(String id) => '/puntos/canjeables/$id';
   static const String puntosReglaActiva = '/puntos/regla-activa';
+  static String puntosMovimientos(String clienteId) => '/puntos/movimientos/$clienteId';
+
+  // Trabajadores ↔ FinantialTracker
+  static const String clientesFinantialResumen = '/clientes/finantial/resumen';
+  static const String clientesFinantialSincronizar = '/clientes/finantial/sincronizar';
+
+  // Deudores (trabajadores con compras a crédito) + unión con FinantialTracker
+  static const String deudores = '/deudores';
+  static const String deudoresResumen = '/deudores/resumen';
+  static String deudorDetalle(String clienteId) => '/deudores/$clienteId';
+  static const String deudoresConsumos = '/deudores/consumos';
+  static String deudorConsumo(String creditoId) =>
+      '/deudores/consumos/$creditoId';
+  static String deudoresCierreDetalle(String cierreId) =>
+      '/deudores/cierres/$cierreId';
+  static String deudoresExportarCierre(String cierreId) =>
+      '/deudores/cierres/$cierreId/exportar-finantial';
+  static const String deudoresAbonosFinantial = '/deudores/finantial/abonos';
+
+  // Ventas
+  static String anularVenta(String id) => '/ventas/$id/anular';
 
   // Créditos: cierre mensual
   static const String creditosDelMes = '/creditos/del-mes';

@@ -13,8 +13,12 @@ class App extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Gestión Bodega',
       debugShowCheckedModeBanner: false,
+      // El diseño usa una paleta clara fija (AppColors). Si el sistema está en
+      // modo oscuro, Material aplicaba un tema oscuro genérico y el texto
+      // oscuro quedaba invisible sobre fondos negros. Se fuerza el tema claro.
       theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      darkTheme: AppTheme.light,
+      themeMode: ThemeMode.light,
       routerConfig: router,
     );
   }

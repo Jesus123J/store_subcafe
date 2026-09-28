@@ -5,10 +5,12 @@ import '../constants/app_constants.dart';
 class CurrencyFormatter {
   CurrencyFormatter._();
 
+  /// Formato peruano: "S/. 1,250.50" (símbolo delante, punto decimal).
   static final NumberFormat _formatter = NumberFormat.currency(
-    locale: 'es_PE',
+    locale: 'en_US',
     symbol: '${AppConstants.currencySymbol} ',
     decimalDigits: 2,
+    customPattern: '\u00a4#,##0.00',
   );
 
   static String format(num? value) {

@@ -130,8 +130,7 @@ class _NuevaCompraDialogState extends ConsumerState<NuevaCompraDialog> {
                       error: (e, _) => Text('Error: $e',
                           style: const TextStyle(color: AppColors.error)),
                       data: (lista) {
-                        final activos =
-                            lista.where((p) => p.activo).toList();
+                        final activos = lista.where((p) => p.activo).toList();
                         return DropdownButtonFormField<String>(
                           value: _proveedorId,
                           isExpanded: true,
@@ -244,8 +243,7 @@ class _NuevaCompraDialogState extends ConsumerState<NuevaCompraDialog> {
                         child: ListView.separated(
                           shrinkWrap: true,
                           itemCount: _items.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 1),
+                          separatorBuilder: (_, __) => const Divider(height: 1),
                           itemBuilder: (_, i) {
                             final it = _items[i];
                             return ListTile(
@@ -472,8 +470,7 @@ class _AgregarItemDialogState extends State<_AgregarItemDialog> {
                     )
                     .toList(),
                 onChanged: (v) => setState(() => _producto = v),
-                validator: (v) =>
-                    v == null ? 'Seleccione producto' : null,
+                validator: (v) => v == null ? 'Seleccione producto' : null,
               ),
               const SizedBox(height: 12),
               Row(

@@ -8,8 +8,9 @@
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/gestion_bodega
-    username: bodega_user
+    # Misma base de datos que FinantialTracker (MySQL en docker "mysql-proyectos")
+    url: jdbc:mysql://localhost:3306/financialtracker1?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=America/Lima&forceConnectionTimeZoneToSession=true
+    username: root
     password: tu_password_real_aqui
 
 app:

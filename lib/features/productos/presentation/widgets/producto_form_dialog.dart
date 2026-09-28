@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
+import '../../../../core/api/api_exception.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/validators.dart';
+import '../../data/models/producto_model.dart';
 
-/// Form para crear/editar producto. Por ahora muestra el dato pero no envía a BD
-/// (el backend aún no tiene POST /productos implementado).
+/// Alta y edición de producto contra el backend (POST/PUT /productos).
+/// Devuelve el [ProductoModel] guardado, o null si se canceló.
 class ProductoFormDialog extends StatefulWidget {
-  const ProductoFormDialog({super.key});
+  const ProductoFormDialog({this.producto, super.key});
+
+  /// Si viene, el diálogo edita ese producto.
+  final ProductoModel? producto;
+
+  bool get esEdicion => producto != null;
 
   @override
   State<ProductoFormDialog> createState() => _ProductoFormDialogState();
@@ -15,15 +25,38 @@ class ProductoFormDialog extends StatefulWidget {
 
 class _ProductoFormDialogState extends State<ProductoFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _codigo = TextEditingController();
-  final _descripcion = TextEditingController();
-  final _stockInicial = TextEditingController(text: '0');
-  final _stockMinimo = TextEditingController(text: '0');
-  final _costo = TextEditingController();
-  final _precio = TextEditingController();
-  bool _esServicio = false;
-  bool _usaContometro = false;
-  bool _esBazar = true; // Por defecto productos físicos son del bazar
+  late final TextEditingController _codigo;
+  late final TextEditingController _descripcion;
+  late final TextEditingController _stockInicial;
+  late final TextEditingController _stockMinimo;
+  late final TextEditingController _costo;
+  late final TextEditingController _precio;
+  late bool _esServicio;
+  late bool _usaContometro;
+  late bool _esBazar;
+  late bool _activo;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.producto;
+    _codigo = TextEditingController(text: p?.codigo ?? '');
+    _descripcion = TextEditingController(text: p?.descripcion ?? '');
+    _stockInicial = TextEditingController(text: _num(p?.stock ?? 0));
+    _stockMinimo = TextEditingController(text: _num(p?.stockMinimo ?? 0));
+    _costo = TextEditingController(
+        text: p == null ? '' : p.costo.toStringAsFixed(2));
+    _precio = TextEditingController(
+        text: p == null ? '' : p.precioVenta.toStringAsFixed(2));
+    _esServicio = p?.esServicio ?? false;
+    _usaContometro = p?.usaContometro ?? false;
+    _esBazar = p?.esBazar ?? true;
+    _activo = p?.activo ?? true;
+  }
+
+  static String _num(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(2);
 
   @override
   void dispose() {
@@ -36,13 +69,48 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
     super.dispose();
   }
 
-  void _guardar() {
+  double _d(TextEditingController c) =>
+      double.tryParse(c.text.replaceAll(',', '.')) ?? 0;
+
+  Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.pop(context, true);
+    setState(() => _guardando = true);
+    final body = {
+      'codigo': _codigo.text.trim().isEmpty
+          ? null
+          : _codigo.text.trim().toUpperCase(),
+      'descripcion': _descripcion.text.trim(),
+      'stock': _esServicio ? 0 : _d(_stockInicial),
+      'stockMinimo': _esServicio ? 0 : _d(_stockMinimo),
+      'esServicio': _esServicio,
+      'usaContometro': _esServicio && _usaContometro,
+      'esBazar': !_esServicio && _esBazar,
+      'activo': _activo,
+      'costo': _d(_costo),
+      'precioVenta': _d(_precio),
+    };
+    try {
+      final json = widget.esEdicion
+          ? await ApiClient.instance.putData<Map<String, dynamic>>(
+              ApiEndpoints.productoById(widget.producto!.id),
+              body: body,
+            )
+          : await ApiClient.instance.postData<Map<String, dynamic>>(
+              ApiEndpoints.productos,
+              body: body,
+            );
+      if (!mounted) return;
+      Navigator.pop(context, ProductoModel.fromJson(json));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      context.showSnack(e is ApiException ? e.message : '$e', isError: true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final titulo = widget.esEdicion ? 'Editar producto' : 'Nuevo producto';
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 560),
@@ -58,16 +126,23 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                   children: [
                     const Icon(Icons.inventory_2, color: AppColors.primary),
                     const SizedBox(width: 8),
-                    Text('Nuevo producto', style: context.textTheme.titleLarge),
+                    Text(titulo, style: context.textTheme.titleLarge),
+                    const Spacer(),
+                    if (widget.esEdicion)
+                      Text(
+                        'Stock actual: ${_num(widget.producto!.stock)}',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
                     Expanded(
-                      flex: 1,
                       child: TextFormField(
                         controller: _codigo,
+                        textCapitalization: TextCapitalization.characters,
                         decoration: const InputDecoration(
                           labelText: 'Código',
                           hintText: 'Ej: GAS001',
@@ -79,6 +154,7 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                       flex: 2,
                       child: TextFormField(
                         controller: _descripcion,
+                        autofocus: !widget.esEdicion,
                         decoration: const InputDecoration(
                           labelText: 'Descripción *',
                           hintText: 'Ej: Inca Kola 500ml',
@@ -95,26 +171,44 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                     Expanded(
                       child: TextFormField(
                         controller: _costo,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))
+                        ],
                         decoration: const InputDecoration(
                           labelText: 'Costo (S/.)',
                           prefixText: 'S/. ',
                           hintText: '0.00',
                         ),
-                        validator: Validators.positiveNumber,
+                        validator: (v) =>
+                            (double.tryParse((v ?? '').replaceAll(',', '.')) ??
+                                        -1) <
+                                    0
+                                ? 'Ingresa el costo'
+                                : null,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
                         controller: _precio,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))
+                        ],
                         decoration: const InputDecoration(
-                          labelText: 'Precio venta (S/.)',
+                          labelText: 'Precio de venta (S/.) *',
                           prefixText: 'S/. ',
                           hintText: '0.00',
                         ),
-                        validator: Validators.positiveNumber,
+                        validator: (v) =>
+                            (double.tryParse((v ?? '').replaceAll(',', '.')) ??
+                                        0) <=
+                                    0
+                                ? 'El precio debe ser mayor a 0'
+                                : null,
                       ),
                     ),
                   ],
@@ -126,9 +220,12 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                       child: TextFormField(
                         controller: _stockInicial,
                         keyboardType: TextInputType.number,
-                        enabled: !_esServicio,
-                        decoration: const InputDecoration(
+                        enabled: !_esServicio && !widget.esEdicion,
+                        decoration: InputDecoration(
                           labelText: 'Stock inicial',
+                          helperText: widget.esEdicion
+                              ? 'El stock cambia con compras, ventas y mermas'
+                              : null,
                         ),
                       ),
                     ),
@@ -159,13 +256,14 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                         value: _esServicio,
                         onChanged: (v) => setState(() {
                           _esServicio = v;
-                          if (v) _esBazar = false; // un servicio no es del bazar
+                          if (v) _esBazar = false;
                         }),
                         title: const Text('Es un servicio',
                             style: TextStyle(color: AppColors.textPrimary)),
                         subtitle: const Text(
-                          'Ej: fotocopia, impresión, foto DNI — no maneja stock',
-                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          'Fotocopia, impresión, foto DNI: no maneja stock',
+                          style: TextStyle(
+                              fontSize: 11, color: AppColors.textSecondary),
                         ),
                         contentPadding: EdgeInsets.zero,
                       ),
@@ -173,13 +271,12 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                         SwitchListTile(
                           value: _esBazar,
                           onChanged: (v) => setState(() => _esBazar = v),
-                          title: const Text(
-                            'Es producto del bazar',
-                            style: TextStyle(color: AppColors.textPrimary),
-                          ),
+                          title: const Text('Es producto del bazar',
+                              style: TextStyle(color: AppColors.textPrimary)),
                           subtitle: const Text(
-                            'Aceptable como canje de vales y puntos de fidelización',
-                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            'Se puede canjear con vales y puntos',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.textSecondary),
                           ),
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -190,31 +287,20 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                           title: const Text('Usa contómetro',
                               style: TextStyle(color: AppColors.textPrimary)),
                           subtitle: const Text(
-                            'Para fotocopiadora con contador físico',
-                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            'Fotocopiadora con contador físico',
+                            style: TextStyle(
+                                fontSize: 11, color: AppColors.textSecondary),
                           ),
                           contentPadding: EdgeInsets.zero,
                         ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.info.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: AppColors.info, size: 16),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Demo: el backend aún no tiene POST /productos. Esta interfaz quedará operativa al implementarlo.',
-                          style: TextStyle(fontSize: 11, color: AppColors.info),
+                      if (widget.esEdicion)
+                        SwitchListTile(
+                          value: _activo,
+                          onChanged: (v) => setState(() => _activo = v),
+                          title: const Text('Activo (visible en el POS)',
+                              style: TextStyle(color: AppColors.textPrimary)),
+                          contentPadding: EdgeInsets.zero,
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -223,14 +309,23 @@ class _ProductoFormDialogState extends State<ProductoFormDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed:
+                          _guardando ? null : () => Navigator.pop(context),
                       child: const Text('Cancelar'),
                     ),
                     const SizedBox(width: 8),
                     FilledButton.icon(
-                      onPressed: _guardar,
-                      icon: const Icon(Icons.save),
-                      label: const Text('Guardar producto'),
+                      onPressed: _guardando ? null : _guardar,
+                      icon: _guardando
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.save),
+                      label: Text(widget.esEdicion
+                          ? 'Guardar cambios'
+                          : 'Crear producto'),
                     ),
                   ],
                 ),

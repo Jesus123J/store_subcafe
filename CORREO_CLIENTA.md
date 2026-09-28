@@ -24,7 +24,7 @@ Espero que se encuentre muy bien. Le escribo para informarle sobre el estado act
 
 Durante las últimas semanas hemos construido la base completa del sistema:
 
-- **Arquitectura técnica** profesional (frontend + backend + base de datos PostgreSQL)
+- **Arquitectura técnica** profesional (frontend + backend + base de datos MySQL)
 - **8 módulos** con interfaz funcional y diseño personalizado:
   - Punto de Venta (POS) con catálogo, carrito y 5 formas de pago
   - Gestión de Productos e inventario con alertas de stock bajo
@@ -58,7 +58,7 @@ Esta versión funciona con datos de demostración y le permitirá darme **feedba
 ### 🔵 FASE 2 — Versión Producción (entrega: **21 de junio de 2026**)
 
 Tres semanas después, le entregaré la versión final que incluirá:
-- Conexión completa con la base de datos PostgreSQL
+- Conexión completa con la base de datos MySQL
 - Persistencia real de todas las ventas, compras, productos y créditos
 - Configuración personalizada con los datos de su negocio (razón social, RUC, dirección, su QR de Yape/Plin)
 - Instalación del servidor de base de datos en su local

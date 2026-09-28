@@ -6,6 +6,7 @@ import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 import '../../data/models/producto_model.dart';
@@ -41,15 +42,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => const ProductoFormDialog(),
-                  );
-                  if (ok == true && context.mounted) {
-                    context.showSnack('Producto guardado (demo)');
-                  }
-                },
+                onPressed: () => _abrirFormulario(context),
                 icon: const Icon(Icons.add),
                 label: const Text('Nuevo producto'),
               ),
@@ -67,12 +60,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                       message: 'Aún no hay productos registrados',
                       icon: Icons.inventory_2_outlined,
                       actionLabel: 'Crear el primero',
-                      onAction: () async {
-                        await showDialog<bool>(
-                          context: context,
-                          builder: (_) => const ProductoFormDialog(),
-                        );
-                      },
+                      onAction: () => _abrirFormulario(context),
                     ),
                   );
                 }
@@ -80,6 +68,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                   productos: lista,
                   busquedaCtrl: _busquedaCtrl,
                   onSearchChange: () => setState(() {}),
+                  onEditar: (p) => _abrirFormulario(context, producto: p),
                 );
               },
             ),
@@ -88,6 +77,19 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
       ),
     );
   }
+
+  Future<void> _abrirFormulario(BuildContext context,
+      {ProductoModel? producto}) async {
+    final guardado = await showDialog<ProductoModel>(
+      context: context,
+      builder: (_) => ProductoFormDialog(producto: producto),
+    );
+    if (guardado == null || !context.mounted) return;
+    ref.invalidate(productosListProvider);
+    context.showSnack(producto == null
+        ? 'Producto creado: ${guardado.descripcion}'
+        : 'Producto actualizado: ${guardado.descripcion}');
+  }
 }
 
 class _ProductosBody extends StatelessWidget {
@@ -95,11 +97,13 @@ class _ProductosBody extends StatelessWidget {
     required this.productos,
     required this.busquedaCtrl,
     required this.onSearchChange,
+    required this.onEditar,
   });
 
   final List<ProductoModel> productos;
   final TextEditingController busquedaCtrl;
   final VoidCallback onSearchChange;
+  final ValueChanged<ProductoModel> onEditar;
 
   @override
   Widget build(BuildContext context) {
@@ -107,11 +111,17 @@ class _ProductosBody extends StatelessWidget {
         ? productos
         : productos
             .where((p) =>
-                p.descripcion.toLowerCase().contains(busquedaCtrl.text.toLowerCase()) ||
-                (p.codigo?.toLowerCase().contains(busquedaCtrl.text.toLowerCase()) ?? false))
+                p.descripcion
+                    .toLowerCase()
+                    .contains(busquedaCtrl.text.toLowerCase()) ||
+                (p.codigo
+                        ?.toLowerCase()
+                        .contains(busquedaCtrl.text.toLowerCase()) ??
+                    false))
             .toList();
 
-    final bajoStock = productos.where((p) => p.stockBajo && !p.esServicio).length;
+    final bajoStock =
+        productos.where((p) => p.stockBajo && !p.esServicio).length;
     final servicios = productos.where((p) => p.esServicio).length;
 
     return Column(
@@ -159,84 +169,89 @@ class _ProductosBody extends StatelessWidget {
                       prefixIcon: const Icon(Icons.search),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 24,
-                      headingRowColor: WidgetStateProperty.all(AppColors.background),
-                      columns: const [
-                        DataColumn(label: Text('Código')),
-                        DataColumn(label: Text('Descripción')),
-                        DataColumn(label: Text('Stock'), numeric: true),
-                        DataColumn(label: Text('Mínimo'), numeric: true),
-                        DataColumn(label: Text('Tipo')),
-                        DataColumn(label: Text('Estado')),
-                      ],
-                      rows: filtrados.map((p) {
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(
-                              p.codigo ?? '—',
-                              style: const TextStyle(color: AppColors.textPrimary),
-                            )),
-                            DataCell(Text(
-                              p.descripcion,
+                  child: AppDataTable(
+                    minWidth: 980,
+                    emptyMessage: 'Ningún producto coincide con la búsqueda',
+                    columns: const [
+                      DataColumn2(label: Text('CÓDIGO'), fixedWidth: 100),
+                      DataColumn2(
+                          label: Text('DESCRIPCIÓN'), size: ColumnSize.L),
+                      DataColumn2(
+                          label: Text('PRECIO'),
+                          fixedWidth: 110,
+                          numeric: true),
+                      DataColumn2(
+                          label: Text('STOCK'), fixedWidth: 90, numeric: true),
+                      DataColumn2(
+                          label: Text('MÍNIMO'), fixedWidth: 90, numeric: true),
+                      DataColumn2(label: Text('TIPO'), size: ColumnSize.M),
+                      DataColumn2(label: Text('ESTADO'), fixedWidth: 100),
+                      DataColumn2(label: Text(''), fixedWidth: 56),
+                    ],
+                    rows: filtrados.map((p) {
+                      final alerta = p.stockBajo && !p.esServicio;
+                      return DataRow2(
+                        onTap: () => onEditar(p),
+                        cells: [
+                          DataCell(Text(p.codigo ?? '—',
+                              style: const TextStyle(fontFamily: 'monospace'))),
+                          DataCell(Text(p.descripcion,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            )),
-                            DataCell(Text(
-                              p.esServicio
-                                  ? '—'
-                                  : CurrencyFormatter.format(p.stock)
-                                      .replaceAll(RegExp(r'S/\.\s?'), ''),
-                              style: TextStyle(
-                                color: p.stockBajo && !p.esServicio
-                                    ? AppColors.error
-                                    : AppColors.textPrimary,
-                                fontWeight: p.stockBajo ? FontWeight.bold : null,
-                              ),
-                            )),
-                            DataCell(Text(
-                              p.esServicio ? '—' : p.stockMinimo.toStringAsFixed(0),
-                              style: const TextStyle(color: AppColors.textPrimary),
-                            )),
-                            DataCell(
-                              Wrap(
-                                spacing: 4,
-                                children: [
-                                  if (p.esServicio)
-                                    const _Chip(
-                                      label: 'Servicio',
-                                      color: AppColors.info,
-                                    )
-                                  else
-                                    const _Chip(
-                                      label: 'Producto',
-                                      color: AppColors.secondary,
-                                    ),
-                                  if (p.esBazar)
-                                    const _Chip(
-                                      label: 'Bazar',
-                                      color: AppColors.primary,
-                                    ),
-                                ],
-                              ),
+                                  fontWeight: FontWeight.w600))),
+                          DataCell(Text(CurrencyFormatter.format(p.precioVenta),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600))),
+                          DataCell(Text(
+                            p.esServicio ? '—' : _fmt(p.stock),
+                            style: TextStyle(
+                              color: alerta
+                                  ? AppColors.error
+                                  : AppColors.textPrimary,
+                              fontWeight: alerta ? FontWeight.w700 : null,
                             ),
-                            DataCell(
-                              p.activo
-                                  ? const _Chip(label: 'Activo', color: AppColors.secondary)
-                                  : const _Chip(label: 'Inactivo', color: AppColors.textSecondary),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
+                          )),
+                          DataCell(
+                              Text(p.esServicio ? '—' : _fmt(p.stockMinimo))),
+                          DataCell(Wrap(
+                            spacing: 4,
+                            children: [
+                              if (p.esServicio)
+                                const _Chip(
+                                    label: 'Servicio', color: AppColors.info)
+                              else
+                                const _Chip(
+                                    label: 'Producto',
+                                    color: AppColors.secondary),
+                              if (p.esBazar)
+                                const _Chip(
+                                    label: 'Bazar', color: AppColors.primary),
+                              if (alerta)
+                                const _Chip(
+                                    label: 'Reponer', color: AppColors.error),
+                            ],
+                          )),
+                          DataCell(AppEstadoChip(
+                            p.activo ? 'Activo' : 'Inactivo',
+                            color: p.activo
+                                ? AppColors.secondary
+                                : AppColors.textSecondary,
+                          )),
+                          DataCell(IconButton(
+                            tooltip: 'Editar',
+                            icon: const Icon(Icons.edit_outlined,
+                                size: 18, color: AppColors.primary),
+                            onPressed: () => onEditar(p),
+                          )),
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ),
               ],
@@ -246,6 +261,9 @@ class _ProductosBody extends StatelessWidget {
       ],
     );
   }
+
+  static String _fmt(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(2);
 }
 
 class _StatTile extends StatelessWidget {
@@ -286,7 +304,8 @@ class _StatTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(
@@ -318,7 +337,8 @@ class _Chip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

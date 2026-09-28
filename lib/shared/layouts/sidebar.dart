@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_text_styles.dart';
 import '../../features/auth/domain/entities/usuario.dart';
 import '../providers/current_user_provider.dart';
 
@@ -35,7 +36,8 @@ class Sidebar extends ConsumerWidget {
           _Item('Vales', Icons.confirmation_number, AppRoutes.vales, 5),
           _Item('Puntos', Icons.star, AppRoutes.puntos, 6),
           _Item('Créditos', Icons.credit_card, AppRoutes.creditos, 7),
-          _Item('Reportes', Icons.bar_chart, AppRoutes.reportes, 8),
+          _Item('Deudores', Icons.receipt_long, AppRoutes.deudores, 8),
+          _Item('Reportes', Icons.bar_chart, AppRoutes.reportes, 9),
         ],
       ),
       // Solo visible si es admin o encargado
@@ -43,10 +45,10 @@ class Sidebar extends ConsumerWidget {
         _Seccion(
           titulo: 'ADMINISTRACIÓN',
           items: const [
-            _Item('Trabajadores', Icons.badge, AppRoutes.trabajadores, 9),
+            _Item('Trabajadores', Icons.badge, AppRoutes.trabajadores, 10),
             _Item('Usuarios del sistema', Icons.admin_panel_settings,
-                AppRoutes.usuarios, 10),
-            _Item('Configuración', Icons.settings, AppRoutes.configuracion, 11),
+                AppRoutes.usuarios, 11),
+            _Item('Configuración', Icons.settings, AppRoutes.configuracion, 12),
           ],
         ),
     ];
@@ -120,31 +122,23 @@ class _BrandHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.store, color: Colors.white, size: 24),
+            child: const Icon(Icons.storefront, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Sub Café',
+                Text('Sub Café',
+                    style:
+                        AppTextStyles.display(size: 20, color: Colors.white)),
+                const Text(
+                  'Hospital San José · caja y bazar',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                Text(
-                  'Gestión Integral',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                  ),
+                      color: Colors.white70, fontSize: 11, letterSpacing: 0.2),
                 ),
               ],
             ),
@@ -192,7 +186,8 @@ class _NavItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       child: Material(
-        color: activo ? Colors.white.withValues(alpha: 0.18) : Colors.transparent,
+        color:
+            activo ? Colors.white.withValues(alpha: 0.18) : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -213,8 +208,7 @@ class _NavItem extends StatelessWidget {
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 13,
-                      fontWeight:
-                          activo ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),

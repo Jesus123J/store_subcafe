@@ -224,7 +224,9 @@ class _CajaAbiertaView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    c.turno == TipoTurno.dia ? Icons.wb_sunny : Icons.nights_stay,
+                    c.turno == TipoTurno.dia
+                        ? Icons.wb_sunny
+                        : Icons.nights_stay,
                     color: Colors.white,
                     size: 36,
                   ),
@@ -853,10 +855,9 @@ class _CerrarCajaDialogState extends ConsumerState<_CerrarCajaDialog> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (diferencia >= 0
-                          ? AppColors.secondary
-                          : AppColors.error)
-                      .withValues(alpha: 0.1),
+                  color:
+                      (diferencia >= 0 ? AppColors.secondary : AppColors.error)
+                          .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -865,9 +866,8 @@ class _CerrarCajaDialogState extends ConsumerState<_CerrarCajaDialog> {
                       : 'Faltante: ${CurrencyFormatter.format(diferencia.abs())}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: diferencia >= 0
-                        ? AppColors.secondary
-                        : AppColors.error,
+                    color:
+                        diferencia >= 0 ? AppColors.secondary : AppColors.error,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 import '../../data/models/proveedor_model.dart';
@@ -32,15 +33,7 @@ class ProveedoresPage extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => const ProveedorFormDialog(),
-                  );
-                  if (ok == true && context.mounted) {
-                    context.showSnack('Proveedor guardado (demo)');
-                  }
-                },
+                onPressed: () => _abrirFormulario(context, ref),
                 icon: const Icon(Icons.add),
                 label: const Text('Nuevo proveedor'),
               ),
@@ -56,16 +49,12 @@ class ProveedoresPage extends ConsumerWidget {
                     message: 'Aún no hay proveedores registrados',
                     icon: Icons.local_shipping_outlined,
                     actionLabel: 'Crear el primero',
-                    onAction: () async {
-                      await showDialog<bool>(
-                        context: context,
-                        builder: (_) => const ProveedorFormDialog(),
-                      );
-                    },
+                    onAction: () => _abrirFormulario(context, ref),
                   );
                 }
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
                       Row(
@@ -89,78 +78,54 @@ class ProveedoresPage extends ConsumerWidget {
                       Expanded(
                         child: AppCard(
                           margin: EdgeInsets.zero,
-                          child: SingleChildScrollView(
-                            child: DataTable(
-                              columnSpacing: 24,
-                              headingRowColor:
-                                  WidgetStateProperty.all(AppColors.background),
-                              columns: const [
-                                DataColumn(label: Text('Razón Social')),
-                                DataColumn(label: Text('RUC')),
-                                DataColumn(label: Text('Dirección')),
-                                DataColumn(label: Text('Teléfono')),
-                                DataColumn(label: Text('Estado')),
-                                DataColumn(label: Text('Acciones')),
-                              ],
-                              rows: list.map((p) {
-                                return DataRow(cells: [
-                                  DataCell(Text(
-                                    p.razonSocial,
-                                    style: const TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  )),
+                          padding: const EdgeInsets.all(12),
+                          child: AppDataTable(
+                            minWidth: 860,
+                            columns: const [
+                              DataColumn2(
+                                  label: Text('RAZÓN SOCIAL'),
+                                  size: ColumnSize.L),
+                              DataColumn2(label: Text('RUC'), fixedWidth: 130),
+                              DataColumn2(
+                                  label: Text('DIRECCIÓN'), size: ColumnSize.M),
+                              DataColumn2(
+                                  label: Text('TELÉFONO'), fixedWidth: 120),
+                              DataColumn2(
+                                  label: Text('ESTADO'), fixedWidth: 100),
+                              DataColumn2(label: Text(''), fixedWidth: 56),
+                            ],
+                            rows: list.map((p) {
+                              return DataRow2(
+                                onTap: () => _abrirFormulario(context, ref,
+                                    proveedor: p),
+                                cells: [
+                                  DataCell(Text(p.razonSocial,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w600))),
                                   DataCell(Text(p.ruc,
                                       style: const TextStyle(
-                                          color: AppColors.textPrimary,
                                           fontFamily: 'monospace'))),
                                   DataCell(Text(p.direccion ?? '—',
-                                      style: const TextStyle(color: AppColors.textPrimary))),
-                                  DataCell(Text(p.telefono ?? '—',
-                                      style: const TextStyle(color: AppColors.textPrimary))),
-                                  DataCell(
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: (p.activo
-                                                ? AppColors.secondary
-                                                : AppColors.textSecondary)
-                                            .withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        p.activo ? 'Activo' : 'Inactivo',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: p.activo
-                                              ? AppColors.secondary
-                                              : AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  DataCell(Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_outlined,
-                                            size: 18, color: AppColors.primary),
-                                        onPressed: () {},
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.shopping_cart_outlined,
-                                            size: 18, color: AppColors.secondary),
-                                        tooltip: 'Ver compras a este proveedor',
-                                        onPressed: () {},
-                                      ),
-                                    ],
+                                      overflow: TextOverflow.ellipsis)),
+                                  DataCell(Text(p.telefono ?? '—')),
+                                  DataCell(AppEstadoChip(
+                                    p.activo ? 'Activo' : 'Inactivo',
+                                    color: p.activo
+                                        ? AppColors.secondary
+                                        : AppColors.textSecondary,
                                   )),
-                                ]);
-                              }).toList(),
-                            ),
+                                  DataCell(IconButton(
+                                    tooltip: 'Editar',
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 18, color: AppColors.primary),
+                                    onPressed: () => _abrirFormulario(
+                                        context, ref,
+                                        proveedor: p),
+                                  )),
+                                ],
+                              );
+                            }).toList(),
                           ),
                         ),
                       ),
@@ -174,6 +139,19 @@ class ProveedoresPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _abrirFormulario(BuildContext context, WidgetRef ref,
+    {ProveedorModel? proveedor}) async {
+  final guardado = await showDialog<ProveedorModel>(
+    context: context,
+    builder: (_) => ProveedorFormDialog(proveedor: proveedor),
+  );
+  if (guardado == null || !context.mounted) return;
+  ref.invalidate(proveedoresListProvider);
+  context.showSnack(proveedor == null
+      ? 'Proveedor creado: ${guardado.razonSocial}'
+      : 'Proveedor actualizado: ${guardado.razonSocial}');
 }
 
 class _StatTile extends StatelessWidget {
@@ -213,7 +191,8 @@ class _StatTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(
