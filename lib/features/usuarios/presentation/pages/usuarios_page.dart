@@ -96,7 +96,8 @@ class _UsuariosTable extends StatelessWidget {
         rows: usuarios.map((u) {
           return DataRow(
             cells: [
-              DataCell(Text(u.username, style: const TextStyle(fontWeight: FontWeight.w500))),
+              DataCell(Text(u.username,
+                  style: const TextStyle(fontWeight: FontWeight.w500))),
               DataCell(Text(u.nombreCompleto)),
               DataCell(_RolChip(rol: u.rol)),
               DataCell(_EstadoChip(activo: u.activo)),
@@ -128,7 +129,8 @@ class _RolChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -149,7 +151,8 @@ class _EstadoChip extends StatelessWidget {
       ),
       child: Text(
         activo ? 'Activo' : 'Inactivo',
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -179,14 +182,16 @@ class _AccionesRow extends ConsumerWidget {
           },
         ),
         IconButton(
-          icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+          icon: const Icon(Icons.delete_outline,
+              size: 18, color: AppColors.error),
           tooltip: 'Desactivar',
           onPressed: () async {
             final confirm = await showDialog<bool>(
               context: context,
               builder: (dialogCtx) => AlertDialog(
                 title: const Text('Desactivar usuario'),
-                content: Text('¿Estás seguro de desactivar a ${usuario.username}?'),
+                content:
+                    Text('¿Estás seguro de desactivar a ${usuario.username}?'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(dialogCtx).pop(false),
@@ -194,7 +199,8 @@ class _AccionesRow extends ConsumerWidget {
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(dialogCtx).pop(true),
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.error),
                     child: const Text('Desactivar'),
                   ),
                 ],
@@ -205,7 +211,8 @@ class _AccionesRow extends ConsumerWidget {
                 await ref.read(usuariosControllerProvider).eliminar(usuario.id);
                 if (context.mounted) context.showSnack('Usuario desactivado');
               } catch (e) {
-                if (context.mounted) context.showSnack(e.toString(), isError: true);
+                if (context.mounted)
+                  context.showSnack(e.toString(), isError: true);
               }
             }
           },

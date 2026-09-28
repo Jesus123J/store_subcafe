@@ -460,9 +460,7 @@ class _GraficoFormasPago extends StatelessWidget {
       );
     }
 
-    final entries = datos.entries
-        .where((e) => e.value > 0)
-        .toList();
+    final entries = datos.entries.where((e) => e.value > 0).toList();
 
     return Column(
       children: [

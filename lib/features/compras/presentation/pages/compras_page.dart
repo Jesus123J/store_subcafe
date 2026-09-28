@@ -26,8 +26,7 @@ class ComprasPage extends ConsumerWidget {
         children: [
           AppPageHeader(
             title: 'Compras a Proveedores',
-            subtitle:
-                'Registro de compras y actualización automática de stock',
+            subtitle: 'Registro de compras y actualización automática de stock',
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh, color: AppColors.primary),
@@ -85,7 +84,8 @@ class _ComprasBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final ahora = DateTime.now();
     final delMes = compras
-        .where((c) => c.fecha.year == ahora.year && c.fecha.month == ahora.month)
+        .where(
+            (c) => c.fecha.year == ahora.year && c.fecha.month == ahora.month)
         .toList();
     final totalMes = delMes.fold<double>(0, (s, c) => s + c.total);
 
@@ -437,8 +437,7 @@ class _DetalleCompraDialog extends ConsumerWidget {
                             .map(
                               (it) => DataRow(cells: [
                                 DataCell(Text(it.productoDescripcion)),
-                                DataCell(
-                                    Text(it.cantidad.toStringAsFixed(2))),
+                                DataCell(Text(it.cantidad.toStringAsFixed(2))),
                                 DataCell(Text(CurrencyFormatter.format(
                                     it.costoUnitario))),
                                 DataCell(
@@ -470,8 +469,8 @@ class _DetalleCompraDialog extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -30,6 +30,11 @@ public class Venta {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
+    /** Trabajador identificado en la venta (opcional). Acumula puntos aunque pague al contado. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cliente_id")
+    private Cliente cliente;
+
     @Column(name = "fecha", nullable = false)
     private OffsetDateTime fecha;
 

@@ -20,6 +20,8 @@ public record VentaDto(
         String motivoAnulacion,
         String observacion,
         boolean tieneCredito,
+        UUID clienteId,
+        String clienteNombre,
         List<VentaItemDto> items,
         List<VentaPagoDto> pagos
 ) {
@@ -35,6 +37,8 @@ public record VentaDto(
                 .motivoAnulacion(v.getMotivoAnulacion())
                 .observacion(v.getObservacion())
                 .tieneCredito(v.getPagos().stream().anyMatch(p -> p.getClienteCredito() != null))
+                .clienteId(v.getCliente() != null ? v.getCliente().getId() : null)
+                .clienteNombre(v.getCliente() != null ? v.getCliente().getNombreCompleto() : null)
                 .items(v.getItems().stream().map(VentaItemDto::from).toList())
                 .pagos(v.getPagos().stream().map(VentaPagoDto::from).toList())
                 .build();

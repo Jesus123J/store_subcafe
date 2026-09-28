@@ -111,7 +111,8 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                           ),
                           child: Text(
                             _msg!,
-                            style: const TextStyle(color: AppColors.textPrimary),
+                            style:
+                                const TextStyle(color: AppColors.textPrimary),
                           ),
                         ),
                       _Seccion(
@@ -119,9 +120,11 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         icon: Icons.business,
                         campos: [
                           _Campo('Razón Social', 'negocio.razon_social', cfg),
-                          _Campo('RUC', 'negocio.ruc', cfg, keyboard: TextInputType.number),
+                          _Campo('RUC', 'negocio.ruc', cfg,
+                              keyboard: TextInputType.number),
                           _Campo('Dirección', 'negocio.direccion', cfg),
-                          _Campo('Teléfono', 'negocio.telefono', cfg, keyboard: TextInputType.phone),
+                          _Campo('Teléfono', 'negocio.telefono', cfg,
+                              keyboard: TextInputType.phone),
                         ],
                         ctrlBuilder: _ctrl,
                       ),
@@ -130,8 +133,10 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         titulo: 'Pagos digitales',
                         icon: Icons.phone_android,
                         campos: [
-                          _Campo('Número Yape', 'pagos.yape_numero', cfg, keyboard: TextInputType.phone),
-                          _Campo('Número Plin', 'pagos.plin_numero', cfg, keyboard: TextInputType.phone),
+                          _Campo('Número Yape', 'pagos.yape_numero', cfg,
+                              keyboard: TextInputType.phone),
+                          _Campo('Número Plin', 'pagos.plin_numero', cfg,
+                              keyboard: TextInputType.phone),
                         ],
                         ctrlBuilder: _ctrl,
                       ),
@@ -140,8 +145,10 @@ class _ConfiguracionPageState extends ConsumerState<ConfiguracionPage> {
                         titulo: 'Impresora térmica',
                         icon: Icons.print,
                         campos: [
-                          _Campo('IP de impresora', 'impresora.ip', cfg, hint: 'Ej: 192.168.1.50'),
-                          _Campo('Modo (red/usb)', 'impresora.modo', cfg, hint: 'red o usb'),
+                          _Campo('IP de impresora', 'impresora.ip', cfg,
+                              hint: 'Ej: 192.168.1.50'),
+                          _Campo('Modo (red/usb)', 'impresora.modo', cfg,
+                              hint: 'red o usb'),
                         ],
                         ctrlBuilder: _ctrl,
                       ),

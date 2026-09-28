@@ -38,6 +38,7 @@ public class VentaService {
     private final ProductoPrecioRepository precioRepo;
     private final ClienteRepository clienteRepo;
     private final CreditoTrabajadorRepository creditoRepo;
+    private final PuntosService puntosService;
 
     public List<VentaDto> listar(UUID cajaId) {
         List<Venta> ventas = cajaId != null
@@ -122,7 +123,24 @@ public class VentaService {
             throw new BusinessException("La suma de pagos (" + sumaPagos + ") no coincide con el total (" + total + ")");
         }
 
-        venta = ventaRepo.save(venta);
+        // Trabajador identificado (puntos): el indicado o, si no, el del credito
+        Cliente identificado = null;
+        if (req.clienteId() != null) {
+            identificado = clienteRepo.findById(req.clienteId())
+                    .orElseThrow(() -> new NotFoundException("Trabajador no encontrado: " + req.clienteId()));
+        } else {
+            identificado = venta.getPagos().stream().map(VentaPago::getClienteCredito)
+                    .filter(java.util.Objects::nonNull).findFirst().orElse(null);
+        }
+        venta.setCliente(identificado);
+
+        // saveAndFlush: los puntos se insertan con JdbcTemplate y necesitan la fila de la venta ya en BD (FK)
+        venta = ventaRepo.saveAndFlush(venta);
+
+        // 2b) Puntos por consumo para el trabajador identificado
+        if (identificado != null) {
+            puntosService.acumularPorVenta(identificado.getId(), venta.getId(), venta.getTotal());
+        }
 
         // 3) Deuda del trabajador por cada pago a credito
         String resumen = venta.getItems().stream()

@@ -96,7 +96,7 @@ class _UsuarioFormDialogState extends ConsumerState<UsuarioFormDialog> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _username,
-                enabled: !_isEdit,        // username no editable
+                enabled: !_isEdit, // username no editable
                 decoration: const InputDecoration(
                   labelText: 'Usuario',
                   prefixIcon: Icon(Icons.person),

@@ -10,6 +10,7 @@ import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/services/report_export_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../shared/widgets/trabajador_picker.dart';
 import '../../../cajas/data/models/caja_models.dart';
 import '../../../cajas/presentation/providers/cajas_provider.dart';
 import '../../../productos/data/models/producto_model.dart';
@@ -41,6 +42,10 @@ class _VentasPageState extends ConsumerState<VentasPage> {
   String _categoriaFiltro = 'Todos';
   bool _mostrandoHistorial = false;
   bool _procesando = false;
+
+  /// Trabajador identificado en la venta (opcional): acumula puntos.
+  TrabajadorSeleccionado? _cliente;
+  bool _mostrarCliente = false;
 
   static const _categorias = ['Todos', 'Productos', 'Servicios', 'Bazar'];
 
@@ -137,6 +142,7 @@ class _VentasPageState extends ConsumerState<VentasPage> {
                 .toList(),
             pagos: pagos,
             observacion: _observacionComprobante(datos),
+            clienteId: _cliente?.id,
           );
     } catch (e) {
       if (mounted) {
@@ -148,6 +154,8 @@ class _VentasPageState extends ConsumerState<VentasPage> {
     if (!mounted) return;
     setState(() {
       _carrito.clear();
+      _cliente = null;
+      _mostrarCliente = false;
       _procesando = false;
     });
     ref.invalidate(productosListProvider); // stock actualizado
@@ -167,6 +175,9 @@ class _VentasPageState extends ConsumerState<VentasPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _detalleConfirmacion('Código', venta.codigo),
+            if (venta.clienteNombre != null)
+              _detalleConfirmacion(
+                  'Trabajador', '${venta.clienteNombre} (suma puntos)'),
             _detalleConfirmacion(
                 'Total', CurrencyFormatter.format(venta.total)),
             const SizedBox(height: 4),
@@ -578,6 +589,33 @@ class _VentasPageState extends ConsumerState<VentasPage> {
                 ),
               ],
             ),
+          ),
+          // Trabajador identificado (opcional) → puntos por consumo
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+            ),
+            child: _cliente != null || _mostrarCliente
+                ? TrabajadorPicker(
+                    seleccionado: _cliente,
+                    compacto: true,
+                    autofocus: _cliente == null,
+                    label: 'Trabajador que compra (DNI o nombre)',
+                    onChanged: (t) => setState(() {
+                      _cliente = t;
+                      if (t == null) _mostrarCliente = false;
+                    }),
+                  )
+                : TextButton.icon(
+                    onPressed: () => setState(() => _mostrarCliente = true),
+                    icon: const Icon(Icons.badge_outlined, size: 18),
+                    label: const Text('Identificar trabajador (suma puntos)'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primaryLight,
+                      alignment: Alignment.centerLeft,
+                    ),
+                  ),
           ),
           Expanded(
             child: _carrito.isEmpty

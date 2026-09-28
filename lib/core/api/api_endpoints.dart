@@ -56,7 +56,13 @@ class ApiEndpoints {
   // Puntos
   static const String puntosSaldos = '/puntos/saldos';
   static const String puntosCanjeables = '/puntos/canjeables';
+  static String puntosCanjeable(String id) => '/puntos/canjeables/$id';
   static const String puntosReglaActiva = '/puntos/regla-activa';
+  static String puntosMovimientos(String clienteId) => '/puntos/movimientos/$clienteId';
+
+  // Trabajadores ↔ FinantialTracker
+  static const String clientesFinantialResumen = '/clientes/finantial/resumen';
+  static const String clientesFinantialSincronizar = '/clientes/finantial/sincronizar';
 
   // Deudores (trabajadores con compras a crédito) + unión con FinantialTracker
   static const String deudores = '/deudores';

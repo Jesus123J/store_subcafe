@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Venta del POS. La suma de pagos debe coincidir con el total de los items.
@@ -16,5 +17,7 @@ import java.util.List;
 public record CrearVentaRequest(
         @NotEmpty(message = "La venta debe tener al menos un item") @Valid List<VentaItemRequest> items,
         @NotEmpty(message = "La venta debe tener al menos un pago") @Valid List<VentaPagoDto> pagos,
-        @Size(max = 300) String observacion
+        @Size(max = 300) String observacion,
+        /** Trabajador identificado (opcional): acumula puntos. Si hay pago CREDITO y viene null, se usa ese trabajador. */
+        UUID clienteId
 ) {}

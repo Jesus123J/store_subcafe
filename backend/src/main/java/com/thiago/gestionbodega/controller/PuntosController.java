@@ -1,8 +1,14 @@
 package com.thiago.gestionbodega.controller;
 
 import com.thiago.gestionbodega.dto.ApiResponse;
+import com.thiago.gestionbodega.service.PuntosService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +31,13 @@ import java.util.UUID;
 public class PuntosController {
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final PuntosService puntosService;
+
+    public record CanjeableRequest(@NotNull UUID productoId,
+                                   @NotNull @DecimalMin("1") BigDecimal puntosRequeridos) {}
+
+    public record ReglaRequest(String descripcion,
+                               @NotNull @DecimalMin("0.01") BigDecimal solesPorPunto) {}
 
     /** Saldo de puntos de todos los clientes (vista agregada). */
     @GetMapping("/saldos")
@@ -71,30 +84,37 @@ public class PuntosController {
                 new MapSqlParameterSource("id", clienteId.toString())));
     }
 
-    /** Catalogo de productos canjeables. */
+    /** Catalogo de productos canjeables (con precio vigente). */
     @GetMapping("/canjeables")
     public ApiResponse<List<Map<String, Object>>> canjeables() {
-        var sql = """
-                SELECT pc.id, pc.producto_id, p.descripcion, pc.puntos_requeridos, pc.activo
-                FROM productos_canjeables pc
-                JOIN productos p ON p.id = pc.producto_id
-                WHERE pc.activo = true
-                ORDER BY pc.puntos_requeridos ASC
-                """;
-        return ApiResponse.ok(jdbc.queryForList(sql, new MapSqlParameterSource()));
+        return ApiResponse.ok(puntosService.canjeables());
+    }
+
+    /** Agrega o actualiza un producto del bazar como canjeable. */
+    @PostMapping("/canjeables")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'ENCARGADO')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> guardarCanjeable(@Valid @RequestBody CanjeableRequest req) {
+        return ResponseEntity.status(201).body(
+                ApiResponse.ok(puntosService.guardarCanjeable(req.productoId(), req.puntosRequeridos()), "Producto canjeable guardado"));
+    }
+
+    @DeleteMapping("/canjeables/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'ENCARGADO')")
+    public ApiResponse<Void> quitarCanjeable(@PathVariable UUID id) {
+        puntosService.quitarCanjeable(id);
+        return ApiResponse.ok(null, "Producto quitado del catalogo canjeable");
     }
 
     /** Regla de puntos activa. */
     @GetMapping("/regla-activa")
     public ApiResponse<Map<String, Object>> reglaActiva() {
-        var sql = """
-                SELECT id, descripcion, soles_por_punto, vigente_desde
-                FROM reglas_puntos
-                WHERE activa = true
-                ORDER BY vigente_desde DESC
-                LIMIT 1
-                """;
-        var rows = jdbc.queryForList(sql, new MapSqlParameterSource());
-        return ApiResponse.ok(rows.isEmpty() ? null : rows.get(0));
+        return ApiResponse.ok(puntosService.reglaActiva());
+    }
+
+    /** Cambia la regla (la anterior queda en historico). */
+    @PutMapping("/regla-activa")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'ENCARGADO')")
+    public ApiResponse<Map<String, Object>> cambiarRegla(@Valid @RequestBody ReglaRequest req) {
+        return ApiResponse.ok(puntosService.cambiarRegla(req.descripcion(), req.solesPorPunto()), "Regla de puntos actualizada");
     }
 }

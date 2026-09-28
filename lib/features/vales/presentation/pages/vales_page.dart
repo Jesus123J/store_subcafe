@@ -12,7 +12,7 @@ import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
-import '../../../trabajadores/presentation/pages/trabajadores_page.dart';
+import '../../../../shared/widgets/trabajador_picker.dart';
 
 class ValeDto {
   ValeDto({
@@ -58,9 +58,7 @@ class ValeDto {
 final valesProvider = FutureProvider.autoDispose<List<ValeDto>>((ref) async {
   final list =
       await ApiClient.instance.getData<List<dynamic>>(ApiEndpoints.vales);
-  return list
-      .map((e) => ValeDto.fromJson(e as Map<String, dynamic>))
-      .toList();
+  return list.map((e) => ValeDto.fromJson(e as Map<String, dynamic>)).toList();
 });
 
 class ValesPage extends ConsumerWidget {
@@ -173,8 +171,7 @@ class _Body extends StatelessWidget {
             child: SingleChildScrollView(
               child: DataTable(
                 columnSpacing: 16,
-                headingRowColor:
-                    WidgetStateProperty.all(AppColors.background),
+                headingRowColor: WidgetStateProperty.all(AppColors.background),
                 columns: const [
                   DataColumn(label: Text('Código')),
                   DataColumn(label: Text('Tipo')),
@@ -219,7 +216,8 @@ class _Body extends StatelessWidget {
                             v.fechaVencimiento != null
                                 ? AppDateUtils.formatDate(v.fechaVencimiento!)
                                 : 'Sin vencer',
-                            style: const TextStyle(color: AppColors.textPrimary),
+                            style:
+                                const TextStyle(color: AppColors.textPrimary),
                           )),
                           DataCell(_Chip(
                             label: v.estado,
@@ -342,7 +340,7 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
   final _monto = TextEditingController();
   final _obs = TextEditingController();
   String _tipo = 'CASH';
-  String? _clienteId;
+  TrabajadorSeleccionado? _trabajador;
   DateTime? _vencimiento;
   bool _loading = false;
   String? _error;
@@ -356,7 +354,7 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
 
   Future<void> _confirmar() async {
     if (!_form.currentState!.validate()) return;
-    if (_tipo == 'NOMBRADO' && _clienteId == null) {
+    if (_tipo == 'NOMBRADO' && _trabajador == null) {
       setState(() => _error = 'Seleccione el trabajador asignado');
       return;
     }
@@ -369,7 +367,7 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
         ApiEndpoints.emitirVale,
         body: {
           'tipo': _tipo,
-          if (_tipo == 'NOMBRADO') 'clienteId': _clienteId,
+          if (_tipo == 'NOMBRADO') 'clienteId': _trabajador!.id,
           'monto': double.parse(_monto.text),
           if (_vencimiento != null)
             'fechaVencimiento':
@@ -387,7 +385,6 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final trabajadoresAsync = ref.watch(trabajadoresProvider);
     return Dialog(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 500),
@@ -425,7 +422,7 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
                       activo: _tipo == 'CASH',
                       onTap: () => setState(() {
                         _tipo = 'CASH';
-                        _clienteId = null;
+                        _trabajador = null;
                       }),
                     ),
                   ),
@@ -443,35 +440,11 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
 
               if (_tipo == 'NOMBRADO') ...[
                 const SizedBox(height: 12),
-                trabajadoresAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (e, _) =>
-                      Text('Error: $e', style: const TextStyle(color: AppColors.error)),
-                  data: (lista) {
-                    final activos =
-                        lista.where((t) => t.activo).toList();
-                    return DropdownButtonFormField<String>(
-                      value: _clienteId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Trabajador asignado',
-                        prefixIcon: Icon(Icons.person),
-                        isDense: true,
-                      ),
-                      items: activos
-                          .map(
-                            (t) => DropdownMenuItem(
-                              value: t.id,
-                              child: Text(
-                                '${t.dni} · ${t.nombreCompleto}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _clienteId = v),
-                    );
-                  },
+                TrabajadorPicker(
+                  seleccionado: _trabajador,
+                  autofocus: true,
+                  label: 'Trabajador asignado (DNI o nombre)',
+                  onChanged: (t) => setState(() => _trabajador = t),
                 ),
               ],
 
@@ -500,11 +473,9 @@ class _EmitirValeDialogState extends ConsumerState<_EmitirValeDialog> {
                 onTap: () async {
                   final d = await showDatePicker(
                     context: context,
-                    initialDate:
-                        DateTime.now().add(const Duration(days: 365)),
+                    initialDate: DateTime.now().add(const Duration(days: 365)),
                     firstDate: DateTime.now(),
-                    lastDate:
-                        DateTime.now().add(const Duration(days: 365 * 5)),
+                    lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
                   );
                   if (d != null) setState(() => _vencimiento = d);
                 },

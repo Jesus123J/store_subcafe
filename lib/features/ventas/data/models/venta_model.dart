@@ -12,6 +12,8 @@ class VentaModel {
     required this.pagos,
     this.observacion,
     this.motivoAnulacion,
+    this.clienteId,
+    this.clienteNombre,
   });
 
   factory VentaModel.fromJson(Map<String, dynamic> j) => VentaModel(
@@ -24,6 +26,8 @@ class VentaModel {
         tieneCredito: j['tieneCredito'] as bool? ?? false,
         observacion: j['observacion'] as String?,
         motivoAnulacion: j['motivoAnulacion'] as String?,
+        clienteId: j['clienteId'] as String?,
+        clienteNombre: j['clienteNombre'] as String?,
         items: (j['items'] as List<dynamic>? ?? [])
             .map((e) => VentaItemModel.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -41,6 +45,8 @@ class VentaModel {
   final bool tieneCredito;
   final String? observacion;
   final String? motivoAnulacion;
+  final String? clienteId;
+  final String? clienteNombre;
   final List<VentaItemModel> items;
   final List<VentaPagoModel> pagos;
 

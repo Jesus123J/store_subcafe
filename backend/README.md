@@ -55,7 +55,8 @@ backend/
             ├── V1__schema_inicial.sql              ← todas las tablas y vistas (MySQL)
             ├── V2__seed_data.sql                   ← admin + configuración + datos de ejemplo
             ├── V3__integracion_finantial_tracker.sql ← enlace clientes ↔ employees (FinantialTracker)
-            └── V4__deudores_y_union_finantial.sql    ← deudas por trabajador, ventas con crédito, detalle de cierre
+            ├── V4__deudores_y_union_finantial.sql    ← deudas por trabajador, ventas con crédito, detalle de cierre
+            └── V5__ventas_cliente_puntos.sql         ← trabajador identificado en la venta (puntos)
 ```
 
 **Tecnologías:** Spring Boot 3.3.5 · Spring Web + Validation · Spring Data JPA + Hibernate 6 ·
@@ -242,8 +243,8 @@ Luego enviar `Authorization: Bearer <token>` en cada request.
 |--------|------|-----------|-------------|
 | POST | `/auth/login` | público | Autenticación |
 | GET/POST/PUT/DELETE | `/usuarios` | ENCARGADO / ADMIN | Usuarios del sistema |
-| GET | `/productos` | autenticado | Productos activos |
-| GET | `/proveedores` | autenticado | Proveedores |
+| GET/POST/PUT | `/productos` · `/productos/{id}` | autenticado / ENCARGADO | Productos activos con precio vigente; alta y edición (nuevo precio = nuevo `producto_precios`) |
+| GET/POST/PUT | `/proveedores` · `/proveedores/{id}` | autenticado / ENCARGADO | Proveedores; alta y edición |
 | GET/POST | `/compras` · `/compras/{id}` | autenticado | Compras (actualizan stock y precio) |
 | GET/POST | `/ventas` · `/ventas/{id}` · `/ventas/{id}/anular` | autenticado / ENCARGADO | POS: venta con pago mixto; CREDITO solo a trabajadores |
 | GET/POST/DELETE | `/deudores` · `/deudores/resumen` · `/deudores/{clienteId}` · `/deudores/consumos` · `/deudores/cierres/{id}` · `/deudores/cierres/{id}/exportar-finantial` · `/deudores/finantial/abonos` | autenticado / ENCARGADO | Deudores (trabajadores con crédito) y unión con FinantialTracker |
@@ -251,7 +252,7 @@ Luego enviar `Authorization: Bearer <token>` en cada request.
 | GET/POST | `/clientes` · `/clientes/import` | autenticado | Trabajadores / clientes |
 | GET/POST | `/clientes/finantial/resumen` · `/clientes/finantial/empleados?pendientes=true` · `/clientes/finantial/sincronizar` | autenticado / ENCARGADO | Padrón de FinantialTracker y sincronización a clientes |
 | GET/POST | `/vales` · `/vales/emitir` · `/vales/{id}/anular` | autenticado | Vales |
-| GET | `/puntos/saldos` · `/puntos/saldo/{id}` · `/puntos/movimientos/{id}` · `/puntos/canjeables` · `/puntos/regla-activa` | autenticado | Puntos |
+| GET/POST/DELETE/PUT | `/puntos/saldos` · `/puntos/saldo/{id}` · `/puntos/movimientos/{id}` · `/puntos/canjeables` (POST/DELETE) · `/puntos/regla-activa` (PUT) | autenticado / ENCARGADO | Puntos: saldos, catálogo canjeable (solo productos del bazar) y regla activa. `POST /ventas` con `clienteId` acumula puntos (piso de total / soles_por_punto) |
 | GET/POST | `/creditos` · `/creditos/del-mes` · `/creditos/deuda-acumulada` · `/creditos/cierres` · `/creditos/cerrar-mes` | autenticado / ENCARGADO | Crédito a trabajadores |
 | GET | `/reportes/ventas-diarias` · `/reportes/stock` · `/reportes/stock-bajo` · `/reportes/top-productos` | autenticado | Reportes |
 | GET/PUT | `/configuracion` | autenticado | Configuración key-value |

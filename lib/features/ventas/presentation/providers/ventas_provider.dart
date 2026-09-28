@@ -42,6 +42,7 @@ class VentasController {
     required List<VentaItemInput> items,
     required List<PagoParcial> pagos,
     String? observacion,
+    String? clienteId,
   }) async {
     final json = await ApiClient.instance.postData<Map<String, dynamic>>(
       ApiEndpoints.ventas,
@@ -50,6 +51,7 @@ class VentasController {
         'pagos': pagos.map((p) => p.toJson()).toList(),
         if (observacion != null && observacion.isNotEmpty)
           'observacion': observacion,
+        if (clienteId != null) 'clienteId': clienteId,
       },
     );
     _ref.invalidate(ventasDeCajaProvider);

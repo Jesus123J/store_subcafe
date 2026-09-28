@@ -19,14 +19,20 @@ class TrabajadorDto {
     required this.apellidos,
     required this.activo,
     this.telefono,
+    this.empleadoId,
+    this.condicionLaboral,
+    this.origen,
   });
   factory TrabajadorDto.fromJson(Map<String, dynamic> j) => TrabajadorDto(
         id: j['id'] as String,
         dni: j['dni'] as String,
-        nombres: j['nombres'] as String,
-        apellidos: j['apellidos'] as String,
+        nombres: j['nombres'] as String? ?? '',
+        apellidos: j['apellidos'] as String? ?? '',
         telefono: j['telefono'] as String?,
         activo: j['activo'] as bool? ?? true,
+        empleadoId: (j['empleadoId'] as num?)?.toInt(),
+        condicionLaboral: j['condicionLaboral'] as String?,
+        origen: j['origen'] as String?,
       );
 
   final String id;
@@ -35,14 +41,25 @@ class TrabajadorDto {
   final String apellidos;
   final String? telefono;
   final bool activo;
+  final int? empleadoId;
+  final String? condicionLaboral;
+  final String? origen; // MANUAL | FINANTIAL
 
-  String get nombreCompleto => '$nombres $apellidos';
+  String get nombreCompleto => '$apellidos $nombres'.trim();
+  bool get vieneDeFinantial => empleadoId != null;
 }
+
+/// Estado de la sincronización con el padrón de FinantialTracker.
+final finantialResumenProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  return ApiClient.instance
+      .getData<Map<String, dynamic>>(ApiEndpoints.clientesFinantialResumen);
+});
 
 final trabajadoresProvider =
     FutureProvider.autoDispose<List<TrabajadorDto>>((ref) async {
-  final list = await ApiClient.instance
-      .getData<List<dynamic>>(ApiEndpoints.clientes);
+  final list =
+      await ApiClient.instance.getData<List<dynamic>>(ApiEndpoints.clientes);
   return list
       .map((e) => TrabajadorDto.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -59,18 +76,28 @@ class TrabajadoresPage extends ConsumerWidget {
       body: Column(
         children: [
           AppPageHeader(
-            title: 'Trabajadores y Clientes',
-            subtitle: 'Personal del negocio (importable desde sistema viejo)',
+            title: 'Trabajadores',
+            subtitle:
+                'Padrón del hospital (FinantialTracker) más los agregados a mano. Son quienes pueden comprar a crédito, recibir vales y acumular puntos.',
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh, color: AppColors.primary),
-                onPressed: () => ref.invalidate(trabajadoresProvider),
+                onPressed: () {
+                  ref.invalidate(trabajadoresProvider);
+                  ref.invalidate(finantialResumenProvider);
+                },
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () => _abrirImport(context, ref),
                 icon: const Icon(Icons.upload_file),
-                label: const Text('Importar'),
+                label: const Text('Importar lista'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: () => _sincronizar(context, ref),
+                icon: const Icon(Icons.sync),
+                label: const Text('Sincronizar con FinantialTracker'),
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
@@ -94,66 +121,93 @@ class TrabajadoresPage extends ConsumerWidget {
                     onAction: () => _abrirImport(context, ref),
                   );
                 }
-                return AppCard(
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 24,
-                      headingRowColor:
-                          WidgetStateProperty.all(AppColors.background),
-                      columns: const [
-                        DataColumn(label: Text('DNI')),
-                        DataColumn(label: Text('Nombre completo')),
-                        DataColumn(label: Text('Teléfono')),
-                        DataColumn(label: Text('Estado')),
-                      ],
-                      rows: lista
-                          .map((t) => DataRow(cells: [
-                                DataCell(Text(
-                                  t.dni,
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    color: AppColors.textPrimary,
-                                  ),
-                                )),
-                                DataCell(Text(
-                                  t.nombreCompleto,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                )),
-                                DataCell(Text(
-                                  t.telefono ?? '—',
-                                  style: const TextStyle(
-                                      color: AppColors.textPrimary),
-                                )),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: (t.activo
-                                              ? AppColors.secondary
-                                              : AppColors.textSecondary)
-                                          .withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      t.activo ? 'Activo' : 'Inactivo',
-                                      style: TextStyle(
-                                        color: t.activo
-                                            ? AppColors.secondary
-                                            : AppColors.textSecondary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
+                return Column(
+                  children: [
+                    _ResumenFinantial(
+                        onSincronizar: () => _sincronizar(context, ref)),
+                    Expanded(
+                      child: AppCard(
+                        child: SingleChildScrollView(
+                          child: DataTable(
+                            columnSpacing: 24,
+                            headingRowColor:
+                                WidgetStateProperty.all(AppColors.background),
+                            columns: const [
+                              DataColumn(label: Text('DNI')),
+                              DataColumn(label: Text('Nombre completo')),
+                              DataColumn(label: Text('Condición')),
+                              DataColumn(label: Text('Origen')),
+                              DataColumn(label: Text('Teléfono')),
+                              DataColumn(label: Text('Estado')),
+                            ],
+                            rows: lista
+                                .map((t) => DataRow(cells: [
+                                      DataCell(Text(
+                                        t.dni,
+                                        style: const TextStyle(
+                                          fontFamily: 'monospace',
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      )),
+                                      DataCell(Text(
+                                        t.nombreCompleto,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      )),
+                                      DataCell(Text(
+                                        t.condicionLaboral ?? '—',
+                                        style: const TextStyle(
+                                            color: AppColors.textPrimary),
+                                      )),
+                                      DataCell(Text(
+                                        t.vieneDeFinantial
+                                            ? 'FinantialTracker #${t.empleadoId}'
+                                            : 'Manual',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: t.vieneDeFinantial
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary,
+                                        ),
+                                      )),
+                                      DataCell(Text(
+                                        t.telefono ?? '—',
+                                        style: const TextStyle(
+                                            color: AppColors.textPrimary),
+                                      )),
+                                      DataCell(
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: (t.activo
+                                                    ? AppColors.secondary
+                                                    : AppColors.textSecondary)
+                                                .withValues(alpha: 0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            t.activo ? 'Activo' : 'Inactivo',
+                                            style: TextStyle(
+                                              color: t.activo
+                                                  ? AppColors.secondary
+                                                  : AppColors.textSecondary,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
-                                ),
-                              ]))
-                          .toList(),
+                                    ]))
+                                .toList(),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 );
               },
             ),
@@ -161,6 +215,44 @@ class TrabajadoresPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _sincronizar(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        icon: const Icon(Icons.sync, color: AppColors.primary, size: 40),
+        title: const Text('Sincronizar con FinantialTracker'),
+        content: const Text(
+          'Se copian los empleados del padrón del hospital como trabajadores de la tienda. '
+          'Los que ya existen se actualizan (nombre, DNI, condición); nunca se borra nada '
+          'ni se pierden teléfonos o estados puestos aquí.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Sincronizar')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    try {
+      final r = await ApiClient.instance.postData<Map<String, dynamic>>(
+        ApiEndpoints.clientesFinantialSincronizar,
+      );
+      if (!context.mounted) return;
+      ref.invalidate(trabajadoresProvider);
+      ref.invalidate(finantialResumenProvider);
+      context.showSnack(
+        'Padrón sincronizado: ${r['creados']} nuevos, ${r['actualizados']} actualizados'
+        '${(r['errores'] as num? ?? 0) > 0 ? ', ${r['errores']} con error' : ''}',
+      );
+    } catch (e) {
+      if (context.mounted) context.showSnack('$e', isError: true);
+    }
   }
 
   Future<void> _abrirNuevo(BuildContext context, WidgetRef ref) async {
@@ -306,8 +398,8 @@ class _NuevoTrabajadorDialogState extends State<_NuevoTrabajadorDialog> {
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(_error!,
-                    style: const TextStyle(
-                        color: AppColors.error, fontSize: 12)),
+                    style:
+                        const TextStyle(color: AppColors.error, fontSize: 12)),
               ],
               const SizedBox(height: 16),
               Row(
@@ -483,6 +575,59 @@ class _ImportDialogState extends State<_ImportDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ResumenFinantial extends ConsumerWidget {
+  const _ResumenFinantial({required this.onSincronizar});
+  final VoidCallback onSincronizar;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(finantialResumenProvider);
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (r) {
+        final pendientes = (r['pendientes'] as num?)?.toInt() ?? 0;
+        final total = (r['empleadosFinantial'] as num?)?.toInt() ?? 0;
+        final manuales = (r['clientesManuales'] as num?)?.toInt() ?? 0;
+        final alDia = pendientes == 0;
+        final color = alDia ? AppColors.secondary : AppColors.warning;
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Icon(alDia ? Icons.check_circle : Icons.sync_problem,
+                  color: color, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  alDia
+                      ? 'Padrón al día con FinantialTracker: $total empleados sincronizados'
+                          '${manuales > 0 ? ' · $manuales agregados a mano' : ''}.'
+                      : 'Hay $pendientes empleado(s) en FinantialTracker que aún no están en la tienda.',
+                  style: const TextStyle(
+                      color: AppColors.textPrimary, fontSize: 13),
+                ),
+              ),
+              if (!alDia)
+                TextButton.icon(
+                  onPressed: onSincronizar,
+                  icon: const Icon(Icons.sync, size: 16),
+                  label: const Text('Sincronizar ahora'),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

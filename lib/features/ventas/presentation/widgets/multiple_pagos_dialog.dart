@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_endpoints.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/widgets/trabajador_picker.dart';
 
 /// Forma de pago aceptada en el POS.
 enum FormaPago {
@@ -420,7 +417,7 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
   late final TextEditingController _montoCtrl;
   final _codigoCtrl = TextEditingController();
   FormaPago _forma = FormaPago.efectivo;
-  Map<String, dynamic>? _trabajador; // seleccionado para CREDITO
+  TrabajadorSeleccionado? _trabajador; // seleccionado para CREDITO
 
   @override
   void initState() {
@@ -454,12 +451,8 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
       codigoOperacion: _forma.requiereCodigo && _codigoCtrl.text.isNotEmpty
           ? _codigoCtrl.text.trim()
           : null,
-      clienteId:
-          _forma.requiereTrabajador ? _trabajador!['id'] as String : null,
-      clienteNombre: _forma.requiereTrabajador
-          ? '${_trabajador!['apellidos'] ?? ''} ${_trabajador!['nombres'] ?? ''}'
-              .trim()
-          : null,
+      clienteId: _forma.requiereTrabajador ? _trabajador!.id : null,
+      clienteNombre: _forma.requiereTrabajador ? _trabajador!.nombre : null,
     ));
   }
 
@@ -556,8 +549,10 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
               ),
               if (_forma.requiereTrabajador) ...[
                 const SizedBox(height: 12),
-                _BuscadorTrabajador(
+                TrabajadorPicker(
                   seleccionado: _trabajador,
+                  autofocus: true,
+                  label: 'Trabajador que asume la deuda (DNI o nombre)',
                   onChanged: (t) => setState(() => _trabajador = t),
                 ),
               ],
@@ -601,158 +596,6 @@ class _AgregarPagoSheetState extends State<_AgregarPagoSheet> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Busca un trabajador (cliente con es_trabajador) por DNI o nombre para
-/// asignarle un pago a CRÉDITO. Los externos no aparecen: para ellos no hay crédito.
-class _BuscadorTrabajador extends StatefulWidget {
-  const _BuscadorTrabajador(
-      {required this.seleccionado, required this.onChanged});
-  final Map<String, dynamic>? seleccionado;
-  final ValueChanged<Map<String, dynamic>?> onChanged;
-
-  @override
-  State<_BuscadorTrabajador> createState() => _BuscadorTrabajadorState();
-}
-
-class _BuscadorTrabajadorState extends State<_BuscadorTrabajador> {
-  final _ctrl = TextEditingController();
-  Timer? _debounce;
-  List<Map<String, dynamic>> _resultados = [];
-  bool _buscando = false;
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _buscar(String q) {
-    _debounce?.cancel();
-    if (q.trim().length < 2) {
-      setState(() => _resultados = []);
-      return;
-    }
-    _debounce = Timer(const Duration(milliseconds: 350), () async {
-      setState(() => _buscando = true);
-      try {
-        final list = await ApiClient.instance.getData<List<dynamic>>(
-          ApiEndpoints.clientes,
-          query: {'q': q.trim()},
-        );
-        if (!mounted) return;
-        setState(() {
-          _resultados = list
-              .cast<Map<String, dynamic>>()
-              .where((c) => c['esTrabajador'] == true && c['activo'] == true)
-              .take(6)
-              .toList();
-        });
-      } catch (_) {
-        if (mounted) setState(() => _resultados = []);
-      } finally {
-        if (mounted) setState(() => _buscando = false);
-      }
-    });
-  }
-
-  String _nombre(Map<String, dynamic> c) =>
-      '${c['apellidos'] ?? ''} ${c['nombres'] ?? ''}'.trim();
-
-  @override
-  Widget build(BuildContext context) {
-    final sel = widget.seleccionado;
-    if (sel != null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.warning.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: AppColors.warning),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.badge, color: AppColors.warning, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_nombre(sel),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary)),
-                  Text(
-                    'DNI ${sel['dni']}'
-                    '${sel['condicionLaboral'] != null ? ' · ${sel['condicionLaboral']}' : ''}',
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () => widget.onChanged(null),
-              child: const Text('Cambiar'),
-            ),
-          ],
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          controller: _ctrl,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: 'Trabajador que asume la deuda (DNI o nombre)',
-            prefixIcon: const Icon(Icons.search),
-            isDense: true,
-            suffixIcon: _buscando
-                ? const Padding(
-                    padding: EdgeInsets.all(10),
-                    child: SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2)),
-                  )
-                : null,
-          ),
-          onChanged: _buscar,
-        ),
-        if (_resultados.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            constraints: const BoxConstraints(maxHeight: 180),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: ListView(
-              shrinkWrap: true,
-              children: _resultados
-                  .map((c) => ListTile(
-                        dense: true,
-                        title: Text(_nombre(c)),
-                        subtitle: Text('DNI ${c['dni']}'),
-                        onTap: () => widget.onChanged(c),
-                      ))
-                  .toList(),
-            ),
-          ),
-        if (_ctrl.text.trim().length >= 2 && _resultados.isEmpty && !_buscando)
-          const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Text(
-              'Sin resultados entre los trabajadores. Un cliente externo no puede comprar a crédito.',
-              style: TextStyle(fontSize: 11, color: AppColors.error),
-            ),
-          ),
-      ],
     );
   }
 }

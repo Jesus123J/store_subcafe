@@ -1,6 +1,7 @@
 // Modelos de respuesta del backend para el modulo de cajas.
 
 enum TipoTurno { dia, noche }
+
 enum EstadoCaja { abierta, cerrada }
 
 TipoTurno _parseTurno(String s) =>
