@@ -8,6 +8,7 @@ import '../../../../core/api/api_endpoints.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 
@@ -65,11 +66,26 @@ final trabajadoresProvider =
       .toList();
 });
 
-class TrabajadoresPage extends ConsumerWidget {
+class TrabajadoresPage extends ConsumerStatefulWidget {
   const TrabajadoresPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TrabajadoresPage> createState() => _TrabajadoresPageState();
+}
+
+class _TrabajadoresPageState extends ConsumerState<TrabajadoresPage> {
+  final _busqueda = TextEditingController();
+  int _pagina = 0;
+  int _porPagina = 25;
+
+  @override
+  void dispose() {
+    _busqueda.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(trabajadoresProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -121,89 +137,122 @@ class TrabajadoresPage extends ConsumerWidget {
                     onAction: () => _abrirImport(context, ref),
                   );
                 }
+                final q = _busqueda.text.trim().toLowerCase();
+                final filtrados = q.isEmpty
+                    ? lista
+                    : lista
+                        .where((t) =>
+                            t.dni.contains(q) ||
+                            t.nombreCompleto.toLowerCase().contains(q) ||
+                            (t.condicionLaboral ?? '')
+                                .toLowerCase()
+                                .contains(q))
+                        .toList();
+                final totalPaginas = filtrados.isEmpty
+                    ? 1
+                    : ((filtrados.length - 1) ~/ _porPagina) + 1;
+                if (_pagina > totalPaginas - 1) _pagina = totalPaginas - 1;
+                final pagina = filtrados
+                    .skip(_pagina * _porPagina)
+                    .take(_porPagina)
+                    .toList();
+
                 return Column(
                   children: [
                     _ResumenFinantial(
                         onSincronizar: () => _sincronizar(context, ref)),
                     Expanded(
                       child: AppCard(
-                        child: SingleChildScrollView(
-                          child: DataTable(
-                            columnSpacing: 24,
-                            headingRowColor:
-                                WidgetStateProperty.all(AppColors.background),
-                            columns: const [
-                              DataColumn(label: Text('DNI')),
-                              DataColumn(label: Text('Nombre completo')),
-                              DataColumn(label: Text('Condición')),
-                              DataColumn(label: Text('Origen')),
-                              DataColumn(label: Text('Teléfono')),
-                              DataColumn(label: Text('Estado')),
-                            ],
-                            rows: lista
-                                .map((t) => DataRow(cells: [
-                                      DataCell(Text(
-                                        t.dni,
-                                        style: const TextStyle(
-                                          fontFamily: 'monospace',
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      )),
-                                      DataCell(Text(
-                                        t.nombreCompleto,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      )),
-                                      DataCell(Text(
-                                        t.condicionLaboral ?? '—',
-                                        style: const TextStyle(
-                                            color: AppColors.textPrimary),
-                                      )),
-                                      DataCell(Text(
-                                        t.vieneDeFinantial
-                                            ? 'FinantialTracker #${t.empleadoId}'
-                                            : 'Manual',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: t.vieneDeFinantial
-                                              ? AppColors.primary
-                                              : AppColors.textSecondary,
-                                        ),
-                                      )),
-                                      DataCell(Text(
-                                        t.telefono ?? '—',
-                                        style: const TextStyle(
-                                            color: AppColors.textPrimary),
-                                      )),
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: (t.activo
-                                                    ? AppColors.secondary
-                                                    : AppColors.textSecondary)
-                                                .withValues(alpha: 0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            t.activo ? 'Activo' : 'Inactivo',
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                AppBuscador(
+                                  controller: _busqueda,
+                                  hint: 'Buscar por DNI, nombre o condición',
+                                  onChanged: (_) => setState(() => _pagina = 0),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  q.isEmpty
+                                      ? '${lista.length} trabajadores'
+                                      : '${filtrados.length} de ${lista.length} coinciden',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: AppDataTable(
+                                minWidth: 900,
+                                emptyMessage:
+                                    'Ningún trabajador coincide con la búsqueda',
+                                columns: const [
+                                  DataColumn2(
+                                      label: Text('DNI'), fixedWidth: 110),
+                                  DataColumn2(
+                                      label: Text('NOMBRE COMPLETO'),
+                                      size: ColumnSize.L),
+                                  DataColumn2(
+                                      label: Text('CONDICIÓN'),
+                                      fixedWidth: 110),
+                                  DataColumn2(
+                                      label: Text('ORIGEN'),
+                                      size: ColumnSize.S),
+                                  DataColumn2(
+                                      label: Text('TELÉFONO'), fixedWidth: 120),
+                                  DataColumn2(
+                                      label: Text('ESTADO'), fixedWidth: 100),
+                                ],
+                                rows: pagina
+                                    .map((t) => DataRow2(cells: [
+                                          DataCell(Text(t.dni,
+                                              style: const TextStyle(
+                                                  fontFamily: 'monospace'))),
+                                          DataCell(Text(t.nombreCompleto,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.w600))),
+                                          DataCell(
+                                              Text(t.condicionLaboral ?? '—')),
+                                          DataCell(Text(
+                                            t.vieneDeFinantial
+                                                ? 'FinantialTracker #${t.empleadoId}'
+                                                : 'Manual',
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              color: t.activo
-                                                  ? AppColors.secondary
+                                              fontSize: 12,
+                                              color: t.vieneDeFinantial
+                                                  ? AppColors.primary
                                                   : AppColors.textSecondary,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
                                             ),
-                                          ),
-                                        ),
-                                      ),
-                                    ]))
-                                .toList(),
-                          ),
+                                          )),
+                                          DataCell(Text(t.telefono ?? '—')),
+                                          DataCell(AppEstadoChip(
+                                            t.activo ? 'Activo' : 'Inactivo',
+                                            color: t.activo
+                                                ? AppColors.secondary
+                                                : AppColors.textSecondary,
+                                          )),
+                                        ]))
+                                    .toList(),
+                              ),
+                            ),
+                            AppPaginador(
+                              total: filtrados.length,
+                              pagina: _pagina,
+                              porPagina: _porPagina,
+                              onPagina: (p) => setState(() => _pagina = p),
+                              onPorPagina: (n) => setState(() {
+                                _porPagina = n;
+                                _pagina = 0;
+                              }),
+                            ),
+                          ],
                         ),
                       ),
                     ),

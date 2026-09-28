@@ -83,7 +83,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         color: Colors.white.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.coffee,
+                      child: const Icon(Icons.storefront,
                           size: 80, color: Colors.white),
                     ),
                     const SizedBox(height: 24),

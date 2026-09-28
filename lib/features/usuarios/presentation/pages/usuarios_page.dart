@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 import '../../../auth/data/models/usuario_model.dart';
@@ -25,8 +26,14 @@ class UsuariosPage extends ConsumerWidget {
         children: [
           AppPageHeader(
             title: 'Usuarios',
-            subtitle: 'Vendedores, Encargados y Administradores del sistema',
+            subtitle: 'Quién puede entrar a la caja y con qué permisos',
             actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh, color: AppColors.primary),
+                tooltip: 'Refrescar',
+                onPressed: () => ref.invalidate(usuariosListProvider),
+              ),
+              const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: () => _abrirFormulario(context, ref, null),
                 icon: const Icon(Icons.add),
@@ -48,6 +55,7 @@ class UsuariosPage extends ConsumerWidget {
                   );
                 }
                 return AppCard(
+                  padding: const EdgeInsets.all(12),
                   child: _UsuariosTable(usuarios: lista, ref: ref),
                 );
               },
@@ -82,30 +90,28 @@ class _UsuariosTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: DataTable(
-        columnSpacing: 24,
-        headingRowColor: WidgetStateProperty.all(AppColors.background),
-        columns: const [
-          DataColumn(label: Text('Usuario')),
-          DataColumn(label: Text('Nombre completo')),
-          DataColumn(label: Text('Rol')),
-          DataColumn(label: Text('Estado')),
-          DataColumn(label: Text('Acciones')),
-        ],
-        rows: usuarios.map((u) {
-          return DataRow(
-            cells: [
-              DataCell(Text(u.username,
-                  style: const TextStyle(fontWeight: FontWeight.w500))),
-              DataCell(Text(u.nombreCompleto)),
-              DataCell(_RolChip(rol: u.rol)),
-              DataCell(_EstadoChip(activo: u.activo)),
-              DataCell(_AccionesRow(usuario: u, refWidget: ref)),
-            ],
-          );
-        }).toList(),
-      ),
+    return AppDataTable(
+      minWidth: 760,
+      columns: const [
+        DataColumn2(label: Text('USUARIO'), size: ColumnSize.S),
+        DataColumn2(label: Text('NOMBRE COMPLETO'), size: ColumnSize.L),
+        DataColumn2(label: Text('ROL'), size: ColumnSize.S),
+        DataColumn2(label: Text('ESTADO'), size: ColumnSize.S),
+        DataColumn2(label: Text(''), fixedWidth: 104),
+      ],
+      rows: usuarios.map((u) {
+        return DataRow2(
+          cells: [
+            DataCell(Text(u.username,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontFamily: 'monospace'))),
+            DataCell(Text(u.nombreCompleto, overflow: TextOverflow.ellipsis)),
+            DataCell(_RolChip(rol: u.rol)),
+            DataCell(_EstadoChip(activo: u.activo)),
+            DataCell(_AccionesRow(usuario: u, refWidget: ref)),
+          ],
+        );
+      }).toList(),
     );
   }
 }

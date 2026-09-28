@@ -7,6 +7,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../shared/widgets/app_async_value.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_data_table.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_page_header.dart';
 import '../../data/models/compra_model.dart';
@@ -127,11 +128,12 @@ class _ComprasBody extends StatelessWidget {
         ),
         Expanded(
           child: AppCard(
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
+                  padding: EdgeInsets.fromLTRB(4, 4, 4, 10),
                   child: Text(
                     'Historial de compras',
                     style: TextStyle(
@@ -142,76 +144,64 @@ class _ComprasBody extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: ListView.separated(
-                    itemCount: compras.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final c = compras[i];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        onTap: () => showDialog<void>(
-                          context: context,
-                          builder: (_) => _DetalleCompraDialog(compra: c),
-                        ),
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.shopping_cart,
-                              color: AppColors.primary),
-                        ),
-                        title: Text(
-                          c.proveedor,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        subtitle: Row(
-                          children: [
-                            if (c.nroDocumento != null) ...[
-                              const Icon(Icons.receipt,
-                                  size: 14, color: AppColors.textSecondary),
-                              const SizedBox(width: 4),
-                              Text(c.nroDocumento!,
-                                  style: const TextStyle(
-                                      color: AppColors.textSecondary)),
-                              const SizedBox(width: 12),
-                            ],
-                            const Icon(Icons.access_time,
-                                size: 14, color: AppColors.textSecondary),
-                            const SizedBox(width: 4),
-                            Text(AppDateUtils.formatDateTime(c.fecha),
-                                style: const TextStyle(
-                                    color: AppColors.textSecondary)),
-                          ],
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              CurrencyFormatter.format(c.total),
+                  child: AppDataTable(
+                    minWidth: 900,
+                    emptyMessage: 'Sin compras registradas',
+                    columns: const [
+                      DataColumn2(label: Text('FECHA'), fixedWidth: 150),
+                      DataColumn2(label: Text('PROVEEDOR'), size: ColumnSize.L),
+                      DataColumn2(label: Text('DOCUMENTO'), fixedWidth: 130),
+                      DataColumn2(label: Text('PRODUCTOS'), size: ColumnSize.M),
+                      DataColumn2(
+                          label: Text('TOTAL'), fixedWidth: 120, numeric: true),
+                      DataColumn2(label: Text(''), fixedWidth: 56),
+                    ],
+                    rows: compras.map((c) {
+                      final items = c.items ?? const [];
+                      final productos = items.isEmpty
+                          ? '—'
+                          : items
+                              .map((it) => it.productoDescripcion)
+                              .join(', ');
+                      void verDetalle() => showDialog<void>(
+                            context: context,
+                            builder: (_) => _DetalleCompraDialog(compra: c),
+                          );
+                      return DataRow2(
+                        onTap: verDetalle,
+                        cells: [
+                          DataCell(Text(AppDateUtils.formatDateTime(c.fecha))),
+                          DataCell(Text(c.proveedor,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
+                                  fontWeight: FontWeight.w600))),
+                          DataCell(Text(c.nroDocumento ?? '—',
+                              style: const TextStyle(fontFamily: 'monospace'))),
+                          DataCell(Text(
+                            items.isEmpty ? 'Ver detalle' : productos,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: items.isEmpty
+                                  ? AppColors.textSecondary
+                                  : AppColors.textPrimary,
+                              fontSize: 12,
+                            ),
+                          )),
+                          DataCell(Text(
+                            CurrencyFormatter.format(c.total),
+                            style: const TextStyle(
                                 fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'Ver detalle →',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
+                                color: AppColors.primary),
+                          )),
+                          DataCell(IconButton(
+                            tooltip: 'Ver detalle',
+                            icon: const Icon(Icons.receipt_long,
+                                size: 18, color: AppColors.primary),
+                            onPressed: verDetalle,
+                          )),
+                        ],
                       );
-                    },
+                    }).toList(),
                   ),
                 ),
               ],
@@ -413,46 +403,46 @@ class _DetalleCompraDialog extends ConsumerWidget {
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: SingleChildScrollView(
-                      child: DataTable(
-                        columnSpacing: 16,
-                        headingRowColor:
-                            WidgetStateProperty.all(AppColors.background),
-                        headingTextStyle: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          fontSize: 12,
-                        ),
-                        dataTextStyle: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 13,
-                        ),
-                        columns: const [
-                          DataColumn(label: Text('Producto')),
-                          DataColumn(label: Text('Cant.'), numeric: true),
-                          DataColumn(label: Text('Costo'), numeric: true),
-                          DataColumn(label: Text('Subtotal'), numeric: true),
-                        ],
-                        rows: items
-                            .map(
-                              (it) => DataRow(cells: [
-                                DataCell(Text(it.productoDescripcion)),
-                                DataCell(Text(it.cantidad.toStringAsFixed(2))),
-                                DataCell(Text(CurrencyFormatter.format(
-                                    it.costoUnitario))),
-                                DataCell(
-                                  Text(
-                                    CurrencyFormatter.format(it.subtotal),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
+                    constraints: const BoxConstraints(maxHeight: 280),
+                    child: AppDataTable(
+                      minWidth: 520,
+                      columns: const [
+                        DataColumn2(
+                            label: Text('PRODUCTO'), size: ColumnSize.L),
+                        DataColumn2(
+                            label: Text('CANT.'),
+                            fixedWidth: 80,
+                            numeric: true),
+                        DataColumn2(
+                            label: Text('COSTO'),
+                            fixedWidth: 110,
+                            numeric: true),
+                        DataColumn2(
+                            label: Text('SUBTOTAL'),
+                            fixedWidth: 120,
+                            numeric: true),
+                      ],
+                      rows: items
+                          .map(
+                            (it) => DataRow2(cells: [
+                              DataCell(Text(it.productoDescripcion,
+                                  overflow: TextOverflow.ellipsis)),
+                              DataCell(Text(
+                                  it.cantidad == it.cantidad.roundToDouble()
+                                      ? it.cantidad.toInt().toString()
+                                      : it.cantidad.toStringAsFixed(2))),
+                              DataCell(Text(
+                                  CurrencyFormatter.format(it.costoUnitario))),
+                              DataCell(Text(
+                                CurrencyFormatter.format(it.subtotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
                                 ),
-                              ]),
-                            )
-                            .toList(),
-                      ),
+                              )),
+                            ]),
+                          )
+                          .toList(),
                     ),
                   );
                 },

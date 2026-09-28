@@ -125,7 +125,7 @@ class _BrandHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.coffee, color: Colors.white, size: 24),
+            child: const Icon(Icons.storefront, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
