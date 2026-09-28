@@ -2,13 +2,15 @@ spring:
   application:
     name: gestion-bodega-backend
 
-  # ─── PostgreSQL ───
-  # Variables sensibles via env vars (con defaults para desarrollo local)
+  # ─── MySQL ───
+  # El backend se conecta a la MISMA base de datos que FinantialTracker
+  # (contenedor docker "mysql-proyectos", ver ~/Desktop/me/mysql-db).
+  # Variables sensibles via env vars (con defaults para desarrollo local).
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/gestion_bodega}
-    username: ${DB_USER:bodega_user}
-    password: ${DB_PASS:bodega_pass}
-    driver-class-name: org.postgresql.Driver
+    url: "${DB_URL:jdbc:mysql://localhost:3306/financialtracker1?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&connectionTimeZone=America/Lima&forceConnectionTimeZoneToSession=true}"
+    username: ${DB_USER:root}
+    password: ${DB_PASS:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -20,17 +22,25 @@ spring:
       ddl-auto: validate          # NUNCA usar 'create' o 'update' — Flyway maneja el schema
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         jdbc:
           time_zone: America/Lima
+        timezone:
+          # MySQL no guarda zona horaria: las fechas se normalizan a America/Lima
+          # (misma zona que la sesion JDBC, ver connectionTimeZone en la URL).
+          default_storage: NORMALIZE
+        type:
+          preferred_uuid_jdbc_type: CHAR   # UUID se guarda como CHAR(36) en MySQL
     open-in-view: false
 
   # ─── Flyway (migraciones) ───
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # La BD ya tiene tablas de FinantialTracker: se crea la linea base en la
+    # version 0 para que V1, V2, ... se apliquen completas.
     baseline-on-migrate: true
+    baseline-version: 0
     validate-on-migrate: true
 
   # ─── Jackson (JSON) ───

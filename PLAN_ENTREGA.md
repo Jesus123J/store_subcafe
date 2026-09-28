@@ -27,9 +27,9 @@
 - ✅ Texto siempre legible (tema oscuro forzado)
 - ✅ Transiciones suaves (fade 120ms)
 
-### ⚙️ Backend (Spring Boot 3.3 + Java 17 + PostgreSQL)
+### ⚙️ Backend (Spring Boot 3.3 + Java 17 + MySQL 8)
 - ✅ Estructura Maven, compilable y ejecutable (`mvn spring-boot:run`)
-- ✅ **PostgreSQL** configurado con `bodega_user / bodega_pass`
+- ✅ **MySQL** compartido con FinantialTracker (`financialtracker1`, `root / 123456` en local)
 - ✅ **Flyway**: migración V1 (13 tablas + enums + índices) y V2 (datos iniciales)
 - ✅ **JWT + Spring Security** con roles (ADMINISTRADOR / ENCARGADO / VENDEDOR)
 - ✅ **Swagger UI** en `/api/swagger-ui.html`
@@ -82,7 +82,7 @@ Actualmente solo `Usuarios` tiene CRUD completo. Hay que agregar:
 **Tiempo estimado:** ~15-20 horas
 
 #### Instalación en local de la clienta
-- PostgreSQL en una PC (servidor de BD)
+- MySQL en una PC (servidor de BD, el mismo de FinantialTracker)
 - Backend Spring Boot corriendo como servicio Windows
 - Configurar IP del servidor en cada PC cliente
 - Generar instalador `.msix` o `.exe` de Flutter
@@ -128,7 +128,7 @@ Actualmente solo `Usuarios` tiene CRUD completo. Hay que agregar:
 |----------|-------|
 | Software desarrollado | S/. 0 (ya pagó por la entrega) |
 | Licencias mensuales | S/. 0 (sin SaaS) |
-| PostgreSQL | S/. 0 (gratis y open source) |
+| MySQL | S/. 0 (gratis y open source) |
 | Yape Negocios básico | S/. 0 |
 
 ### Soporte (opcional, lo cobras tú)
@@ -170,7 +170,7 @@ Actualmente solo `Usuarios` tiene CRUD completo. Hay que agregar:
 
 ### Fase D — Instalación y Capacitación (2-3 días)
 1. **En la tienda de la clienta:**
-   - Instalar PostgreSQL en la PC del Administrador
+   - Instalar MySQL (o Docker) en la PC del Administrador
    - Configurar como servicio Windows (auto-arranque)
    - Configurar IP estática (`192.168.1.100` típico)
 2. **Backend como servicio:**
@@ -209,7 +209,7 @@ Actualmente solo `Usuarios` tiene CRUD completo. Hay que agregar:
 - Puerto `8080` abierto en el firewall del servidor
 
 ### Backups
-- Script PowerShell diario: `pg_dump gestion_bodega > backup_YYYYMMDD.sql`
+- Script diario: `mysqldump -uroot -p financialtracker1 > backup_YYYYMMDD.sql`
 - Programado en Task Scheduler a las 2 AM
 - Copia automática a USB o Google Drive (opcional)
 
