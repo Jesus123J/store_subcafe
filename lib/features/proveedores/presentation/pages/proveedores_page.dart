@@ -32,15 +32,7 @@ class ProveedoresPage extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => const ProveedorFormDialog(),
-                  );
-                  if (ok == true && context.mounted) {
-                    context.showSnack('Proveedor guardado (demo)');
-                  }
-                },
+                onPressed: () => _abrirFormulario(context, ref),
                 icon: const Icon(Icons.add),
                 label: const Text('Nuevo proveedor'),
               ),
@@ -56,16 +48,12 @@ class ProveedoresPage extends ConsumerWidget {
                     message: 'Aún no hay proveedores registrados',
                     icon: Icons.local_shipping_outlined,
                     actionLabel: 'Crear el primero',
-                    onAction: () async {
-                      await showDialog<bool>(
-                        context: context,
-                        builder: (_) => const ProveedorFormDialog(),
-                      );
-                    },
+                    onAction: () => _abrirFormulario(context, ref),
                   );
                 }
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
                       Row(
@@ -116,9 +104,11 @@ class ProveedoresPage extends ConsumerWidget {
                                           color: AppColors.textPrimary,
                                           fontFamily: 'monospace'))),
                                   DataCell(Text(p.direccion ?? '—',
-                                      style: const TextStyle(color: AppColors.textPrimary))),
+                                      style: const TextStyle(
+                                          color: AppColors.textPrimary))),
                                   DataCell(Text(p.telefono ?? '—',
-                                      style: const TextStyle(color: AppColors.textPrimary))),
+                                      style: const TextStyle(
+                                          color: AppColors.textPrimary))),
                                   DataCell(
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -146,15 +136,12 @@ class ProveedoresPage extends ConsumerWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
+                                        tooltip: 'Editar',
                                         icon: const Icon(Icons.edit_outlined,
                                             size: 18, color: AppColors.primary),
-                                        onPressed: () {},
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.shopping_cart_outlined,
-                                            size: 18, color: AppColors.secondary),
-                                        tooltip: 'Ver compras a este proveedor',
-                                        onPressed: () {},
+                                        onPressed: () => _abrirFormulario(
+                                            context, ref,
+                                            proveedor: p),
                                       ),
                                     ],
                                   )),
@@ -174,6 +161,19 @@ class ProveedoresPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _abrirFormulario(BuildContext context, WidgetRef ref,
+    {ProveedorModel? proveedor}) async {
+  final guardado = await showDialog<ProveedorModel>(
+    context: context,
+    builder: (_) => ProveedorFormDialog(proveedor: proveedor),
+  );
+  if (guardado == null || !context.mounted) return;
+  ref.invalidate(proveedoresListProvider);
+  context.showSnack(proveedor == null
+      ? 'Proveedor creado: ${guardado.razonSocial}'
+      : 'Proveedor actualizado: ${guardado.razonSocial}');
 }
 
 class _StatTile extends StatelessWidget {
@@ -213,7 +213,8 @@ class _StatTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(

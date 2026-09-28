@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/api/api_exception.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/services/report_export_service.dart';
@@ -412,13 +413,7 @@ class _VentasPageState extends ConsumerState<VentasPage> {
         children: [
           const Icon(Icons.point_of_sale, color: AppColors.primary),
           const SizedBox(width: 12),
-          const Text(
-            'Punto de Venta',
-            style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary),
-          ),
+          Text('Punto de venta', style: AppTextStyles.display(size: 22)),
           const SizedBox(width: 16),
           Container(
             decoration: BoxDecoration(
@@ -566,11 +561,9 @@ class _VentasPageState extends ConsumerState<VentasPage> {
               children: [
                 const Icon(Icons.shopping_cart, color: Colors.white),
                 const SizedBox(width: 12),
-                const Text('Carrito',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600)),
+                Text('Ticket',
+                    style:
+                        AppTextStyles.display(size: 20, color: Colors.white)),
                 const Spacer(),
                 Container(
                   padding:
@@ -638,13 +631,11 @@ class _VentasPageState extends ConsumerState<VentasPage> {
                               onPlus: () => _cambiarCantidad(i, 1),
                             ),
                             SizedBox(
-                              width: 70,
+                              width: 76,
                               child: Text(
                                 CurrencyFormatter.format(item.subtotal),
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary),
+                                style: AppTextStyles.mono(size: 13),
                               ),
                             ),
                           ],
@@ -653,12 +644,10 @@ class _VentasPageState extends ConsumerState<VentasPage> {
                     },
                   ),
           ),
+          const _Perforado(),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: AppColors.background,
-              border: Border(top: BorderSide(color: AppColors.border)),
-            ),
+            decoration: const BoxDecoration(color: AppColors.background),
             child: Column(
               children: [
                 Row(
@@ -671,10 +660,10 @@ class _VentasPageState extends ConsumerState<VentasPage> {
                             color: AppColors.textSecondary)),
                     Text(
                       CurrencyFormatter.format(_total),
-                      style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary),
+                      style: AppTextStyles.mono(
+                          size: 28,
+                          color: AppColors.primary,
+                          weight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -1180,6 +1169,44 @@ class _CantidadStepper extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Borde perforado, como el corte de un ticket térmico.
+class _Perforado extends StatelessWidget {
+  const _Perforado();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 14,
+      child: LayoutBuilder(
+        builder: (_, c) {
+          final n = (c.maxWidth / 14).floor();
+          return Stack(
+            children: [
+              Container(color: AppColors.background),
+              Positioned.fill(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(
+                    n,
+                    (_) => Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

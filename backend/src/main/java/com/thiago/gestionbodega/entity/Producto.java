@@ -34,6 +34,10 @@ public class Producto extends BaseEntity {
     @Column(name = "usa_contometro", nullable = false)
     private boolean usaContometro;
 
+    /** Producto del bazar: canjeable con vales / puntos. */
+    @Column(name = "es_bazar", nullable = false)
+    private boolean esBazar;
+
     @Column(name = "activo", nullable = false)
     private boolean activo;
 }

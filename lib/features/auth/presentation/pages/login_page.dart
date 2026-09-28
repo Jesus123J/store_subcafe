@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/providers/current_user_provider.dart';
-import '../../domain/entities/usuario.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../providers/auth_provider.dart';
 
@@ -20,8 +20,8 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _userCtrl = TextEditingController(text: 'admin');       // pre-llenado para demo
-  final _passCtrl = TextEditingController(text: 'admin123');
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _loading = false;
   String? _error;
 
@@ -57,18 +57,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  void _entrarDemo() {
-    const usuarioDemo = Usuario(
-      id: 'demo-user-id',
-      username: 'demo',
-      nombreCompleto: 'Usuario Demo (Administrador)',
-      rol: RolUsuario.administrador,
-      activo: true,
-    );
-    ref.read(currentUserProvider.notifier).state = usuarioDemo;
-    context.go(AppRoutes.ventas);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,20 +83,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         color: Colors.white.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.store, size: 80, color: Colors.white),
+                      child: const Icon(Icons.coffee,
+                          size: 80, color: Colors.white),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Gestión Bodega',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w300,
-                        color: Colors.white,
-                      ),
-                    ),
+                    Text('Sub Café',
+                        style: AppTextStyles.display(
+                            size: 40, color: Colors.white)),
                     const SizedBox(height: 8),
                     Text(
-                      'Sistema integral de ventas e inventario',
+                      'Caja, bazar y fotocopias · Hospital San José',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white.withValues(alpha: 0.8),
@@ -134,7 +118,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Bienvenido',
+                          'Hola de nuevo',
                           style: context.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AppColors.primary,
@@ -142,7 +126,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Ingresa tus credenciales para continuar',
+                          'Entra con tu usuario de caja para abrir el turno',
                           style: TextStyle(color: AppColors.textSecondary),
                         ),
                         const SizedBox(height: 32),
@@ -152,7 +136,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             labelText: 'Usuario',
                             prefixIcon: Icon(Icons.person_outline),
                           ),
-                          validator: (v) => Validators.required(v, fieldName: 'Usuario'),
+                          validator: (v) =>
+                              Validators.required(v, fieldName: 'Usuario'),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -162,7 +147,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             labelText: 'Contraseña',
                             prefixIcon: Icon(Icons.lock_outline),
                           ),
-                          validator: (v) => Validators.required(v, fieldName: 'Contraseña'),
+                          validator: (v) =>
+                              Validators.required(v, fieldName: 'Contraseña'),
                           onFieldSubmitted: (_) => _login(),
                         ),
                         if (_error != null) ...[
@@ -181,7 +167,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 Expanded(
                                   child: Text(
                                     _error!,
-                                    style: const TextStyle(color: AppColors.error, fontSize: 13),
+                                    style: const TextStyle(
+                                        color: AppColors.error, fontSize: 13),
                                   ),
                                 ),
                               ],
@@ -202,30 +189,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       color: Colors.white, strokeWidth: 2),
                                 )
                               : const Text('Ingresar'),
-                        ),
-                        const SizedBox(height: 16),
-                        const Row(children: [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('o', style: TextStyle(color: AppColors.textSecondary)),
-                          ),
-                          Expanded(child: Divider()),
-                        ]),
-                        const SizedBox(height: 16),
-                        OutlinedButton.icon(
-                          onPressed: _loading ? null : _entrarDemo,
-                          icon: const Icon(Icons.play_circle_outline),
-                          label: const Text('Entrar en modo Demo (sin backend)'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Modo Demo: navega la app sin conectar al backend',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                       ],
                     ),

@@ -41,15 +41,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => const ProductoFormDialog(),
-                  );
-                  if (ok == true && context.mounted) {
-                    context.showSnack('Producto guardado (demo)');
-                  }
-                },
+                onPressed: () => _abrirFormulario(context),
                 icon: const Icon(Icons.add),
                 label: const Text('Nuevo producto'),
               ),
@@ -67,12 +59,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                       message: 'Aún no hay productos registrados',
                       icon: Icons.inventory_2_outlined,
                       actionLabel: 'Crear el primero',
-                      onAction: () async {
-                        await showDialog<bool>(
-                          context: context,
-                          builder: (_) => const ProductoFormDialog(),
-                        );
-                      },
+                      onAction: () => _abrirFormulario(context),
                     ),
                   );
                 }
@@ -80,6 +67,7 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
                   productos: lista,
                   busquedaCtrl: _busquedaCtrl,
                   onSearchChange: () => setState(() {}),
+                  onEditar: (p) => _abrirFormulario(context, producto: p),
                 );
               },
             ),
@@ -88,6 +76,19 @@ class _ProductosPageState extends ConsumerState<ProductosPage> {
       ),
     );
   }
+
+  Future<void> _abrirFormulario(BuildContext context,
+      {ProductoModel? producto}) async {
+    final guardado = await showDialog<ProductoModel>(
+      context: context,
+      builder: (_) => ProductoFormDialog(producto: producto),
+    );
+    if (guardado == null || !context.mounted) return;
+    ref.invalidate(productosListProvider);
+    context.showSnack(producto == null
+        ? 'Producto creado: ${guardado.descripcion}'
+        : 'Producto actualizado: ${guardado.descripcion}');
+  }
 }
 
 class _ProductosBody extends StatelessWidget {
@@ -95,11 +96,13 @@ class _ProductosBody extends StatelessWidget {
     required this.productos,
     required this.busquedaCtrl,
     required this.onSearchChange,
+    required this.onEditar,
   });
 
   final List<ProductoModel> productos;
   final TextEditingController busquedaCtrl;
   final VoidCallback onSearchChange;
+  final ValueChanged<ProductoModel> onEditar;
 
   @override
   Widget build(BuildContext context) {
@@ -107,11 +110,17 @@ class _ProductosBody extends StatelessWidget {
         ? productos
         : productos
             .where((p) =>
-                p.descripcion.toLowerCase().contains(busquedaCtrl.text.toLowerCase()) ||
-                (p.codigo?.toLowerCase().contains(busquedaCtrl.text.toLowerCase()) ?? false))
+                p.descripcion
+                    .toLowerCase()
+                    .contains(busquedaCtrl.text.toLowerCase()) ||
+                (p.codigo
+                        ?.toLowerCase()
+                        .contains(busquedaCtrl.text.toLowerCase()) ??
+                    false))
             .toList();
 
-    final bajoStock = productos.where((p) => p.stockBajo && !p.esServicio).length;
+    final bajoStock =
+        productos.where((p) => p.stockBajo && !p.esServicio).length;
     final servicios = productos.where((p) => p.esServicio).length;
 
     return Column(
@@ -159,7 +168,8 @@ class _ProductosBody extends StatelessWidget {
                       prefixIcon: const Icon(Icons.search),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
                 ),
@@ -167,27 +177,38 @@ class _ProductosBody extends StatelessWidget {
                   child: SingleChildScrollView(
                     child: DataTable(
                       columnSpacing: 24,
-                      headingRowColor: WidgetStateProperty.all(AppColors.background),
+                      headingRowColor:
+                          WidgetStateProperty.all(AppColors.background),
                       columns: const [
                         DataColumn(label: Text('Código')),
                         DataColumn(label: Text('Descripción')),
+                        DataColumn(label: Text('Precio'), numeric: true),
                         DataColumn(label: Text('Stock'), numeric: true),
                         DataColumn(label: Text('Mínimo'), numeric: true),
                         DataColumn(label: Text('Tipo')),
                         DataColumn(label: Text('Estado')),
+                        DataColumn(label: Text('')),
                       ],
                       rows: filtrados.map((p) {
                         return DataRow(
                           cells: [
                             DataCell(Text(
                               p.codigo ?? '—',
-                              style: const TextStyle(color: AppColors.textPrimary),
+                              style:
+                                  const TextStyle(color: AppColors.textPrimary),
                             )),
                             DataCell(Text(
                               p.descripcion,
                               style: const TextStyle(
                                 color: AppColors.textPrimary,
                                 fontWeight: FontWeight.w500,
+                              ),
+                            )),
+                            DataCell(Text(
+                              CurrencyFormatter.format(p.precioVenta),
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
                               ),
                             )),
                             DataCell(Text(
@@ -199,12 +220,16 @@ class _ProductosBody extends StatelessWidget {
                                 color: p.stockBajo && !p.esServicio
                                     ? AppColors.error
                                     : AppColors.textPrimary,
-                                fontWeight: p.stockBajo ? FontWeight.bold : null,
+                                fontWeight:
+                                    p.stockBajo ? FontWeight.bold : null,
                               ),
                             )),
                             DataCell(Text(
-                              p.esServicio ? '—' : p.stockMinimo.toStringAsFixed(0),
-                              style: const TextStyle(color: AppColors.textPrimary),
+                              p.esServicio
+                                  ? '—'
+                                  : p.stockMinimo.toStringAsFixed(0),
+                              style:
+                                  const TextStyle(color: AppColors.textPrimary),
                             )),
                             DataCell(
                               Wrap(
@@ -230,9 +255,19 @@ class _ProductosBody extends StatelessWidget {
                             ),
                             DataCell(
                               p.activo
-                                  ? const _Chip(label: 'Activo', color: AppColors.secondary)
-                                  : const _Chip(label: 'Inactivo', color: AppColors.textSecondary),
+                                  ? const _Chip(
+                                      label: 'Activo',
+                                      color: AppColors.secondary)
+                                  : const _Chip(
+                                      label: 'Inactivo',
+                                      color: AppColors.textSecondary),
                             ),
+                            DataCell(IconButton(
+                              tooltip: 'Editar',
+                              icon: const Icon(Icons.edit_outlined,
+                                  size: 18, color: AppColors.primary),
+                              onPressed: () => onEditar(p),
+                            )),
                           ],
                         );
                       }).toList(),
@@ -286,7 +321,8 @@ class _StatTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(
@@ -318,7 +354,8 @@ class _Chip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

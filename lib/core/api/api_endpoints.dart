@@ -13,9 +13,11 @@ class ApiEndpoints {
 
   // Proveedores
   static const String proveedores = '/proveedores';
+  static String proveedorById(String id) => '/proveedores/$id';
 
   // Productos
   static const String productos = '/productos';
+  static String productoById(String id) => '/productos/$id';
 
   // Ventas
   static const String ventas = '/ventas';

@@ -10,10 +10,9 @@ class AppErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final esConexion =
-        message.toLowerCase().contains('conex') ||
-            message.toLowerCase().contains('server') ||
-            message.toLowerCase().contains('servidor');
+    final esConexion = message.toLowerCase().contains('conex') ||
+        message.toLowerCase().contains('server') ||
+        message.toLowerCase().contains('servidor');
 
     return Center(
       child: Container(
@@ -42,9 +41,7 @@ class AppErrorWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              esConexion
-                  ? 'No se pudo conectar al servidor'
-                  : 'Algo salió mal',
+              esConexion ? 'No se pudo conectar al servidor' : 'Algo salió mal',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 18,

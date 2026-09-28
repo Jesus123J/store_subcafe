@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/router.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_text_styles.dart';
 import '../../features/auth/domain/entities/usuario.dart';
 import '../providers/current_user_provider.dart';
 
@@ -121,31 +122,23 @@ class _BrandHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.store, color: Colors.white, size: 24),
+            child: const Icon(Icons.coffee, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Sub Café',
+                Text('Sub Café',
+                    style:
+                        AppTextStyles.display(size: 20, color: Colors.white)),
+                const Text(
+                  'Hospital San José · caja y bazar',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                Text(
-                  'Gestión Integral',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                  ),
+                      color: Colors.white70, fontSize: 11, letterSpacing: 0.2),
                 ),
               ],
             ),
