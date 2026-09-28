@@ -38,6 +38,13 @@ public class DeudorService {
     private final CreditoTrabajadorRepository creditoRepo;
     private final UsuarioRepository usuarioRepo;
 
+    /** Todos los consumos a credito (abiertos y cerrados), mas recientes primero. */
+    public List<DeudorMovimientoDto> listarConsumos() {
+        return creditoRepo.findAll(org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.DESC, "fecha"))
+                .stream().map(DeudorMovimientoDto::from).toList();
+    }
+
     public List<Map<String, Object>> listar(String q) {
         String filtro = (q == null || q.isBlank()) ? "" :
                 " WHERE dni LIKE :q OR nombre_completo LIKE :q ";

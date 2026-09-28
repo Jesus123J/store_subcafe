@@ -3,7 +3,7 @@ package com.thiago.gestionbodega.controller;
 import com.thiago.gestionbodega.dto.ApiResponse;
 import com.thiago.gestionbodega.dto.CierreMensualResultDto;
 import com.thiago.gestionbodega.dto.DeudorMovimientoDto;
-import com.thiago.gestionbodega.repository.CreditoTrabajadorRepository;
+import com.thiago.gestionbodega.service.DeudorService;
 import com.thiago.gestionbodega.service.CierreCreditosService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +21,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CreditoController {
 
-    private final CreditoTrabajadorRepository repository;
+    private final DeudorService deudorService;
     private final CierreCreditosService cierreService;
 
     /** Listado completo de consumos a credito (abiertos y cerrados). */
     @GetMapping
     public ApiResponse<List<DeudorMovimientoDto>> listar() {
-        return ApiResponse.ok(repository.findAll().stream().map(DeudorMovimientoDto::from).toList());
+        // Dentro de una transaccion (DeudorService) para poder leer cliente/venta/registradoPor (LAZY)
+        return ApiResponse.ok(deudorService.listarConsumos());
     }
 
     /** Creditos pendientes del mes actual, agrupados por trabajador. */
