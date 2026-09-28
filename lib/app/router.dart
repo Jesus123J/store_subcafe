@@ -7,6 +7,7 @@ import '../features/cajas/presentation/pages/cajas_page.dart';
 import '../features/compras/presentation/pages/compras_page.dart';
 import '../features/configuracion/presentation/pages/configuracion_page.dart';
 import '../features/creditos/presentation/pages/creditos_page.dart';
+import '../features/deudores/presentation/pages/deudores_page.dart';
 import '../features/productos/presentation/pages/productos_page.dart';
 import '../features/proveedores/presentation/pages/proveedores_page.dart';
 import '../features/puntos/presentation/pages/puntos_page.dart';
@@ -28,6 +29,7 @@ class AppRoutes {
   static const vales = '/vales';
   static const puntos = '/puntos';
   static const creditos = '/creditos';
+  static const deudores = '/deudores';
   static const reportes = '/reportes';
   static const trabajadores = '/trabajadores';
   static const usuarios = '/usuarios';
@@ -86,6 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           _branch(AppRoutes.vales, const ValesPage()),
           _branch(AppRoutes.puntos, const PuntosPage()),
           _branch(AppRoutes.creditos, const CreditosPage()),
+          _branch(AppRoutes.deudores, const DeudoresPage()),
           _branch(AppRoutes.reportes, const ReportesPage()),
           _branch(AppRoutes.trabajadores, const TrabajadoresPage()),
           _branch(AppRoutes.usuarios, const UsuariosPage()),

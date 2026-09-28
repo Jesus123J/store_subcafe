@@ -35,7 +35,8 @@ class Sidebar extends ConsumerWidget {
           _Item('Vales', Icons.confirmation_number, AppRoutes.vales, 5),
           _Item('Puntos', Icons.star, AppRoutes.puntos, 6),
           _Item('Créditos', Icons.credit_card, AppRoutes.creditos, 7),
-          _Item('Reportes', Icons.bar_chart, AppRoutes.reportes, 8),
+          _Item('Deudores', Icons.receipt_long, AppRoutes.deudores, 8),
+          _Item('Reportes', Icons.bar_chart, AppRoutes.reportes, 9),
         ],
       ),
       // Solo visible si es admin o encargado
@@ -43,10 +44,10 @@ class Sidebar extends ConsumerWidget {
         _Seccion(
           titulo: 'ADMINISTRACIÓN',
           items: const [
-            _Item('Trabajadores', Icons.badge, AppRoutes.trabajadores, 9),
+            _Item('Trabajadores', Icons.badge, AppRoutes.trabajadores, 10),
             _Item('Usuarios del sistema', Icons.admin_panel_settings,
-                AppRoutes.usuarios, 10),
-            _Item('Configuración', Icons.settings, AppRoutes.configuracion, 11),
+                AppRoutes.usuarios, 11),
+            _Item('Configuración', Icons.settings, AppRoutes.configuracion, 12),
           ],
         ),
     ];
@@ -192,7 +193,8 @@ class _NavItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
       child: Material(
-        color: activo ? Colors.white.withValues(alpha: 0.18) : Colors.transparent,
+        color:
+            activo ? Colors.white.withValues(alpha: 0.18) : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -213,8 +215,7 @@ class _NavItem extends StatelessWidget {
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 13,
-                      fontWeight:
-                          activo ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: activo ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),

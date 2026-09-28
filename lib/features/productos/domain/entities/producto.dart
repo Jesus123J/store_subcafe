@@ -11,6 +11,8 @@ class Producto extends Equatable {
     required this.activo,
     this.codigo,
     this.esBazar = false,
+    this.precioVenta = 0,
+    this.costo = 0,
   });
 
   final String id;
@@ -26,6 +28,10 @@ class Producto extends Equatable {
   /// Definido por Karina en su respuesta del 17/jun/2026.
   final bool esBazar;
 
+  /// Precio de venta vigente (último producto_precios). Lo entrega GET /productos.
+  final double precioVenta;
+  final double costo;
+
   bool get stockBajo => stock <= stockMinimo;
 
   @override
@@ -39,5 +45,7 @@ class Producto extends Equatable {
         usaContometro,
         activo,
         esBazar,
+        precioVenta,
+        costo,
       ];
 }
