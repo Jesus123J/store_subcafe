@@ -118,17 +118,106 @@ class AppTheme {
         textColor: base,
         iconColor: base,
       ),
-      tooltipTheme: const TooltipThemeData(
-        textStyle: TextStyle(color: Colors.white, fontSize: 12),
+      tooltipTheme: TooltipThemeData(
+        textStyle: const TextStyle(color: Colors.white, fontSize: 12),
+        decoration: BoxDecoration(
+          color: AppColors.textPrimary,
+          borderRadius: BorderRadius.circular(6),
+        ),
       ),
+
+      // ── Superficies emergentes: siempre blancas con texto oscuro ──
+      dialogTheme: const DialogThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        iconColor: AppColors.primary,
+        titleTextStyle: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+        contentTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        textStyle: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+      ),
+      dropdownMenuTheme: const DropdownMenuThemeData(
+        textStyle: TextStyle(color: AppColors.textPrimary),
+        menuStyle: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(Colors.white),
+          surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
+        ),
+      ),
+      menuTheme: const MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(Colors.white),
+          surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
+        ),
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: AppColors.textPrimary,
+        contentTextStyle: TextStyle(color: Colors.white, fontSize: 14),
+        actionTextColor: Colors.white,
+        behavior: SnackBarBehavior.floating,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.white,
+        selectedColor: AppColors.primary,
+        disabledColor: AppColors.background,
+        labelStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+        secondaryLabelStyle: const TextStyle(color: Colors.white, fontSize: 13),
+        side: const BorderSide(color: AppColors.border),
+        checkmarkColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorColor: AppColors.primary,
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(foregroundColor: AppColors.textPrimary),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? AppColors.primary : Colors.white,
+        ),
+        checkColor: const WidgetStatePropertyAll(Colors.white),
+        side: const BorderSide(color: AppColors.textSecondary),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? AppColors.primary : AppColors.textSecondary,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? AppColors.primary : Colors.white,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? AppColors.primary.withValues(alpha: 0.4)
+              : AppColors.border,
+        ),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(color: AppColors.primary),
+      dividerColor: AppColors.border,
+      canvasColor: Colors.white,
+      dialogBackgroundColor: Colors.white,
     );
   }
 
-  static ThemeData get dark => ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          brightness: Brightness.dark,
-        ),
-      );
+  /// El diseño no tiene variante oscura: el modo oscuro reutiliza el tema
+  /// claro para que el texto (siempre oscuro) sea legible.
+  static ThemeData get dark => light;
 }
